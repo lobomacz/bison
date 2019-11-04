@@ -1,0 +1,61 @@
+from django import forms
+from django.core.validators import RegexValidator
+from . import models
+
+
+class CuentaForm(forms.ModelForm):
+	"""Formulario para  CuentaContable"""
+
+	class Meta:
+		model = models.Cuenta
+		fields = '__all__'
+
+
+class AsientoForm(forms.ModelForm):
+	"""Formulario para Asiento"""
+	
+	class Meta:
+		model = models.Asiento
+		fields = '__all__'
+		widgets = {
+			'id':HiddenInput
+		}
+
+class DetalleAsientoForm(forms.ModelForm):
+	"""Formulario para DetalleAsiento"""
+
+	class Meta:
+		model = models.DetalleAsiento
+		fields = '__all__'
+		widgets = {
+			'id':HiddenInput
+		}
+
+class EjercicioForm(forms.ModelForm):
+	""" Formulario para Ejercicio """
+
+	class Meta:
+		model = models.Ejercicio
+		fields = '__all__'
+		
+
+class PeriodoForm(forms.ModelForm):
+	"""Formulario para PeriodoContable"""
+
+	class Meta:
+		model = models.PeriodoContable
+		fields = '__all__'
+		widgets = {
+			'id':HiddenInput
+		}
+		
+
+class AsientoAnuladoForm(forms.Form):
+
+	def __init__(self, periodos):
+	    super(AsientoAnuladoForm, self).__init__()
+	    self.periodos = periodos
+
+
+
+

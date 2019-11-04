@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block navegacion %}
+	{% if 'administrador' in groups %}
+		<a href="" class="barra__nav--link"></a>
+		<a href="" class="barra__nav--link"></a>
+		<a href="" class="barra__nav--link"></a>
+		<a href="" class="barra__nav--link"></a>
+	{% else %}
+		<a href="" class="barra__nav--link"></a>
+		<a href="" class="barra__nav--link"></a>
+		<a href="" class="barra__nav--link"></a>
+		<a href="" class="barra__nav--link"></a>
+	{% endif %}
+	<form action="{% url 'logout' %}" class="form-inline" method="post">
+		<input type="submit" class="btn btn-outline-success" value="Salir">
+	</form>
+	<a href="" class="btn btn-outline-success float-right"></a>
+{% endblock %}

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+	<title>Sistema Admnistrativo{% if seccion %} || {{ seccion }}{% endif %}</title>
+	<meta charset="utf-8">
+	<meta name="author" content="Marvin Córdoba">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,700,900" rel="stylesheet">
+	{% load static %}
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+	<link rel="stylesheet" href="{% static 'core/css/estilo.css' %}">
+	<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+	<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+	<!--
+	<link rel="stylesheet" href="{% static 'core/css/bootstrap.css' %}">
+	<script src="{% static 'core/js/jquery/3.4.1.min.js' %}"></script>
+	<script src="{% static 'core/js/popper.min.js' %}"></script>
+	<script src="{% static 'core/js/tooltip.min.js' %}"></script>
+	<script src="{% static 'core/js/bootstrap.min.js' %}"></script>-->
+</head>
+<body>
+	<header class="encabezado">
+		<nav class="navbar navbar-expand-lg navbar-dark	bg-dark">
+			<a href="{% url 'index' %}" class="navbar-brand">{{ empresa }}</a>
+			{% block navegacion %}{% endblock %}
+		</nav>
+	</header>
+	<main class="contenido container">
+		{% block menu %}{% endblock %}
+		<div class="contenido__main">
+			<h1 class="titulo">
+				{{ titulo }}
+			</h1>
+			{% block contenido %}{% endblock %}
+		</div>
+	</main>
+	<footer class="pie">
+		{% block enlaces %}{% endblock %}
+		<h4 class="pie__texto"></h4>
+		<p class="pie__copyright"></p>
+	</footer>
+</body>
+</html>
