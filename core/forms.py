@@ -26,7 +26,7 @@ class EmpleadoForm(forms.ModelForm):
         model = models.Empleado
         fields = '__all__'
         widgets = {
-        	'id':HiddenInput(),
+        	'id':forms.HiddenInput,
         }
     
 		

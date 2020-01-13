@@ -5,19 +5,28 @@ from django.contrib.auth.decorators import login_required, permission_required
 from django.core.exceptions import PermissionDenied, BadRequest
 from django.http import Http404
 from django.conf import settings
-from django.apps import apps
+#from django.apps import apps
 from django.forms import formset_factory, modelformset_factory
 from . import forms, models
 
 # Create your views here.
 
+def get_empleado_object(_id):
+
+	empleado = get_object_or_404(models.Empleado. usuario__usuario__id=_id)
+
+	return empleado
+
+
 @login_required
 def index(request):
+
 	empresa = settings.NOMBRE_EMPRESA
 	groups = request.user.groups
 	empleado = None
-	usuario = get_object_or_404(models.Usuario, usuario__id=request.user.id)
-	empleado = usuario.empleado
+	empleado = get_empleado_object(request.user.id)
+	#empleado = usuario.empleado
+
 	c = {
 	'empresa':empresa, 
 	'seccion':'inicio', 
@@ -139,7 +148,9 @@ def nuevo_empleado_usuario(request):
 	if request.method == "GET":
 		
 		form = forms.EmpleadoUsuarioForm()
+
 		empresa = settings.NOMBRE_EMPRESA
+
 		c = {'empresa':empresa, 'seccion':'Empleados con Usuario', 'titulo':'registro de empleado con usuario', 'form':form, 'view':'vNuevoEmpleadoUsuario'}
 		
 		return render(request, 'form_template.html', c)
@@ -147,11 +158,17 @@ def nuevo_empleado_usuario(request):
 	elif request.method == "POST":
 		
 		datos = request.POST
+
 		user = User.objects.create_user(datos['correo'], datos['correo'], datos['password'], first_name=datos['nombre'], last_name=datos['apellido'])
+		
 		user.save()
+
 		user = User.objects.get(username=datos['correo'])
+
 		empleado = models.Empleado(datos)
+
 		empleado.usuario = user
+
 		empleado.save()
 		
 		return redirect('lista_empleados')
@@ -169,9 +186,11 @@ def editar_empleado(request, id_emp):
 		if request.method == "GET":
 			
 			empleado = get_object_or_404(models.Empleado, pk=id_emp)
+
 			form = forms.EmpleadoForm(empleado)
+
 			empresa = settings.NOMBRE_EMPRESA
-			action = 
+
 			c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'actualización de empleados', 'form':form, 'view':'vEditarEmpleado', 'id':id_emp}
 			
 			return render(request, 'form_template.html', c)
@@ -179,25 +198,38 @@ def editar_empleado(request, id_emp):
 		elif request.method == "POST":
 			
 			empleado = models.Empleado.objects.get(pk=id_emp)
+
 			formEmpleado = forms.EmpleadoForm(request.POST, instance=empleado)
+
 			formEmpleado.save()
+
 			return redirect('ver_empleado', {'id_emp':id_emp})
 
 
 @login_required
 @permission_required('core.administrar_empleados')
 def eliminar_empleado(request, _id):
+
 	if _id == None:
+
 		return render(request, 'error.html', {'titulo':'Error de Registro', 'mensaje':'El ID no corresponde a ningún registro.'})
+	
 	else:
+
 		if request.method == "GET":
+
 			empresa = settings.NOMBRE_EMPRESA
+
 			c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'Eliminar Empleado', 'mensaje':'Se va a eliminar un registro de la base de datos.', 'view':'vElimnarEmpleado', 'id':_id}
+			
 			return render(request, 'warning_template.html', c)
 		
 		elif request.method == "POST":
+
 			empleado = models.Empleado.objects.get(pk=_id)
+
 			empleado.delete()
+			
 			return redirect('lista_empleados')
 
 

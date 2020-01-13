@@ -33,7 +33,7 @@ class Entrada(models.Model):
 	orden = models.ForeignKey('OrdenEntradaMateriales', null=True)
 	#factura = models.CharField(max_length=15)
 	
-class Detalle_Entrada(models.Model):
+class DetalleEntrada(models.Model):
 	"""Modelo de datos para DetalleEntradaAlmacen"""
 	entrada = models.ForeignKey(EntradaAlmacen, on_delete=models.CASCADE)
 	producto = models.ForeignKey(Producto)
@@ -53,7 +53,7 @@ class Salida(models.Model):
 	orden = models.ForeignKey('OrdenSalidaMateriales', null=True)
 	#factura = models.ForeignKey(Factura, on_delete=models.CASCADE)
 
-class Detalle_Salida(models.Model):
+class DetalleSalida(models.Model):
 	"""Modelo de datos para DetalleSalidaAlmacen"""
 	salida = models.ForeignKey(SalidaAlmacen, on_delete=models.CASCADE)
 	producto = models.ForeignKey(Producto)
@@ -62,7 +62,7 @@ class Detalle_Salida(models.Model):
 	costo_unit = models.DecimalField(max_digits=6, decimal_places=2)
 	total = models.DecimalField(max_digits=6, decimal_places=2)
 
-class Orden_Salida(models.Model):
+class OrdenSalida(models.Model):
 	"""Modelo de datos para OrdenSalidaMateriales"""
 	fecha = models.DateField()
 	concepto = models.CharField(max_length=200)
@@ -72,14 +72,14 @@ class Orden_Salida(models.Model):
 	anulado = models.BooleanField(default=False)
 	entregado = models.BooleanField(default=False)
 		
-class Detalle_Orden_Salida(models.Model):
+class DetalleOrden_Salida(models.Model):
 	"""Modelo de datos para DetalleOrdenDeRuta"""
 	orden = models.ForeignKey(OrdenSalidaMateriales)
 	producto = models.ForeignKey(Producto, on_delete=models.PROTECT)
 	unidad_medida = models.ForeignKey(UnidadMedida)
 	cantidad = models.DecimalField(max_digits=6, decimal_places=2)
 
-class Orden_Entrada(models.Model):
+class OrdenEntrada(models.Model):
 	"""Modelo de datos para OrdenEntradaMateriales"""
 	fecha = models.DateField()
 	concepto = models.CharField(max_length=200)
@@ -89,14 +89,14 @@ class Orden_Entrada(models.Model):
 	anulado = models.BooleanField(default=False)
 	entregado = models.BooleanField(default=False)
 		
-class Detalle_Orden_Entrada(models.Model):
+class DetalleOrdenEntrada(models.Model):
 	"""Modelo de datos para DetalleOrdenDeRuta"""
 	orden = models.ForeignKey(OrdenEntradaMateriales)
 	producto = models.ForeignKey(Producto, on_delete=models.PROTECT)
 	unidad_medida = models.ForeignKey(UnidadMedida)
 	cantidad = models.DecimalField(max_digits=6, decimal_places=2)
 
-class Orden_Carga(models.Model):
+class OrdenCarga(models.Model):
 	"""Modelo de datos para Orden de Carga"""
 	fecha = models.DateField()
 	vendedor = models.ForeignKey(Vendedor)

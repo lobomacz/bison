@@ -18,7 +18,7 @@ class AsientoForm(forms.ModelForm):
 		model = models.Asiento
 		fields = '__all__'
 		widgets = {
-			'id':HiddenInput
+			'id':forms.HiddenInput
 		}
 
 class DetalleAsientoForm(forms.ModelForm):
@@ -28,7 +28,7 @@ class DetalleAsientoForm(forms.ModelForm):
 		model = models.DetalleAsiento
 		fields = '__all__'
 		widgets = {
-			'id':HiddenInput
+			'id':forms.HiddenInput
 		}
 
 class EjercicioForm(forms.ModelForm):
@@ -46,15 +46,9 @@ class PeriodoForm(forms.ModelForm):
 		model = models.PeriodoContable
 		fields = '__all__'
 		widgets = {
-			'id':HiddenInput
+			'id':forms.HiddenInput
 		}
 		
-
-class AsientoAnuladoForm(forms.Form):
-
-	def __init__(self, periodos):
-	    super(AsientoAnuladoForm, self).__init__()
-	    self.periodos = periodos
 
 
 

@@ -138,7 +138,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 NOMBRE_EMPRESA = 'SINAI'
 
-NOMBRE_PROYECTO = 'Sistema de Facturación'
+NOMBRE_PROYECTO = 'Business Integrated System Online'
+
+MONTO_IVA = 0.15
 
 LOGOUT_REDIRECT_URL = '/core/login/'
 

@@ -1,10 +1,20 @@
 from django.shortcuts import render, redirect, get_object_or_404, get_list_or_404
 from django.conf import settings
 from django.forms import formset_factory, modelformset_factory, inlineformset_factory
+from django.contrib.auth import login_required, permission_required
+from bison.core.models import Empleado
 from . import models, forms
 import datetime, calendar
 
 # Create your views here.
+
+def get_empleado_object(_id):
+
+	empleado = get_object_or_404(Empleado. usuario__usuario__id=_id)
+
+	return empleado
+
+
 @login_required
 @permission_required(['contabilidad.view_asiento', 'contabilidad.view_cuenta', 'contabilidad.view_periodo'])
 def index(request):
@@ -181,9 +191,11 @@ def nuevo_asiento(request, _id):
 
 		if asientoForm.is_valid():
 
-			asientoForm.save()
+			asiento = asientoForm.save(commit=False)
 
-			return redirect('indice_asientos')
+			asiento.save()
+
+			return redirect('editar_asiento', {'_id':asiento.id})
 
 		else:
 
@@ -193,7 +205,7 @@ def nuevo_asiento(request, _id):
 @permission_required('contabilidad.change_asiento')
 def editar_asiento(request, _id):
 
-	AsientoFormSet = inlineformset_factory(models.Asiento, models.DetalleAsiento, extra=6)
+	AsientoFormSet = inlineformset_factory(models.Asiento, models.DetalleAsiento, extra=6, form=forms.DetalleAsientoForm)
 
 	if request.method == 'GET':
 
