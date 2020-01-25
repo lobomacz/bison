@@ -11,6 +11,7 @@ class Producto(models.Model):
 	nombre = models.CharField(max_length=100)
 	categoria = models.ForeignKey(Categoria)
 	unidad_base = models.ForeignKey(UnidadMedida)
+	costo_unit = models.DecimalField('Costo', max_digits=6, decimal_places=2)
 	precio_unit = models.DecimalField('Precio', max_digits=6, decimal_places=2)
 	minimo = models.DecimalField(max_digits=6, decimal_places=2)
 	maximo = models.DecimalField(max_digits=6, decimal_places=2)

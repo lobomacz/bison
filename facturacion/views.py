@@ -21,10 +21,13 @@ def get_empleado_object(_id):
 def index(request):
 
 	empresa = settings.NOMBRE_EMPRESA
+
 	periodo = models.Periodo.objects.get(activo=True)
+
 	empleado = get_empleado_object(request.user.id)
 
 	c = {'titulo':'Menú de Ventas', 'seccion':'Facturación', 'empresa':empresa, 'periodo':periodo, 'empleado':empleado}
+	
 	return render(request, 'indice.html', c)
 
 
@@ -633,11 +636,9 @@ def entregar_orden_ruta(request, _id):
 
 			empleado = get_empleado_object(request.user.id)
 
-			#RENDERIZAR FORMULARIO CON CAMPO SELECT PARA RECIBIDO_POR
+			c = {'titulo':'Entregar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'view':'vEntregarOrdenRuta', 'id':orden.id, 'empleado':empleado}
 
-			c = {'titulo':'Entregar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'mensaje':'Los productos de la orden de ruta se registrarán como entregados.', 'view':'vEntregarOrdenRuta', 'id':orden.id, 'empleado':empleado}
-
-			return render(request, 'warning_template.html', c)
+			return render(request, 'entregar_orden_ruta.html', c)
 
 		elif request.method == 'POST':
 			
@@ -651,19 +652,122 @@ def entregar_orden_ruta(request, _id):
 @login_required
 @permission_required('facturacion.delete_ordenruta')
 def eliminar_orden_ruta(request, _id):
-	pass
+	
+	orden = get_object_or_404(models.OrdenRuta, pk=_id)
 
+	if orden.autorizado and orden.entregado:
+		
+		return render(request, 'error.html', {'titulo':'Error!', 'seccion':'Facturación', 'mensaje':'La orden fue autorizada y entregada. No se puede eliminar.', 'view':'vListaOrdenesRuta'})
 
-@login_required
-@permission_required('facturacion.change_detalleordenruta')
-def entregar_detalle_orden_ruta(request, _id):
-	pass
+	else:
+
+		if request.method == "GET":
+			
+			empresa = settings.NOMBRE_EMPRESA
+
+			empleado = get_empleado_object(request.user.id)
+
+			c = {'titulo':'Eliminar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'mensaje':'Se eliminará la orden de ruta.', 'view':'vEliminarOrdenRuta', 'id':orden.id, 'empleado':empleado}
+
+			return render(request, 'warning_template.html', c)
+
+		elif request.method == "POST":
+			
+			orden.delete()
+
+			return redirect('lista_ordenes_ruta')
 
 
 @login_required
 @permission_required('facturacion.delete_detalleordenruta')
-def eliminar_detalle_orden_ruta(request, _id):
-	pass
+def eliminar_detalle_orden_ruta(request, _id, _idd):
+	
+	orden = get_object_or_404(models.OrdenRuta, pk=_id)
+
+	if orden.autorizado or orden.anulado:
+		
+		return render(request, 'error.html', {'titulo':'Error!', 'seccion':'Facturación', 'mensaje':'No se puede eliminar la línea de detalle.', 'view':'vVerOrdenRuta', 'id':_id})
+
+	else:
+
+		if request.method == "GET":
+			
+			empresa = settings.NOMBRE_EMPRESA
+
+			empleado = get_empleado_object(request.user.id)
+
+			c = {'titulo':'Eliminar Detalle de Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'mensaje':'Se eliminará la línea de detalle de la orden de ruta.', 'view':'vEliminarDetalleOrdenRuta', 'id':orden.id, 'idd':'_idd', 'empleado':empleado}
+
+			return render(request, 'warning_template.html', c)
+
+		elif request.method == "POST":
+			
+			detalle = orden.detalleordenruta_set.filter(_idd)
+
+			detalle.delete()
+
+			return redirect('ver_orden_ruta', {'_id':orden.id})
+
+
+@login_required
+@permission_required(['facturacion.change_ordenruta', 'facturacion.change_detalleordenruta'])
+def liquidar_orden_ruta(request, _id):
+	
+	orden = get_object_or_404(models.OrdenRuta, pk=_id)
+
+	if orden.anulado or orden.liquidado:
+		
+		return render(request, 'error.html', {'titulo':'Error de Acceso', 'seccion':'Facturación', 'empresa':settings.NOMBRE_EMPRESA, 'mensaje':'La orden de ruta no puede ser modificada.', 'view':'vListaOrdenesRuta'})
+
+	DetalleFormset = inlineformset_factory(models.OrdenRuta, models.DetalleOrdenRuta, form=forms.fLiquidaDetalleOrdenRuta)
+
+	if request.method == "GET":
+		
+		empresa = settings.NOMBRE_EMPRESA
+
+		empleado = get_empleado_object(request.user.id)
+
+		formset = DetalleFormset(instance=orden)
+
+		c = {'titulo':'Liquidación de Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'empleado':empleado, 'formset':formset, 'view':'vLiquidarOrdenRuta', 'id':orden.id}
+
+		return render(request, 'form_orden_ruta.html', c)
+
+	elif request.method == "POST":
+		
+		formset = DetalleFormset(request.POST, request.FILES, instance=orden)
+
+		if formset.is_valid():
+			
+			for form in formset.forms:
+
+				detalle = form.save(commit=False)
+
+				costo_producto = detalle.producto.costo_unit
+
+				detalle.costo_vendido = detalle.cantidad_vendida * costo_producto
+
+				detalle.costo_faltante = (detalle.cantidad_entregada - (detalle.cantidad_vendida + detalle.cantidad_recibida)) * costo_producto if detalle.cantidad_entregada > (detalle.cantidad_vendida + detalle.cantidad_recibida) else 0.00
+
+				detalle.save()
+
+
+			if not orden.detalleordenruta_set.all().aggregate(Sum('costo_faltante')) > 0.00:
+				
+				empleado = get_empleado_object(request.user.id)
+
+				orden.liquidado = True
+
+				orden.liquidado_por = empleado
+
+			return redirect('ver_orden_ruta', {'_id':orden.id})
+
+		else:
+
+			return render(request, 'error.html', {'titulo':'Error!', 'seccion':'Facturación', 'mensaje':'Los datos no son válidos.', 'view':'vVerOrdenRuta', 'id':_id})
+
+
+
 
 
 

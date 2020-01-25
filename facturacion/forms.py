@@ -95,7 +95,6 @@ class fOrdenRuta(forms.ModelForm):
 			'entregado_por',
 			'autorizado',
 			'autorizado_por',
-			'anulado',
 			'liquidado',
 			'liquidado_por',
 			'digitador',
@@ -109,7 +108,7 @@ class fEntregaOrdenRuta(forms.ModelForm):
 
 	class Meta:
 		model = models.OrdenRuta
-		fields = ['id', 'recibido_por']
+		fields = ['id', 'recibido_por', 'observaciones']
 		widgets = {
 			'id':forms.HiddenInput
 		}
@@ -120,11 +119,11 @@ class fDetalleOrdenRuta(forms.ModelForm):
 	class Meta:
 		model = models.DetalleOrdenRuta 
 		exclude = [
-			'total', 
+			'costo_total', 
 			'cantidad_vendida', 
-			'vendido', 
+			'costo_vendido', 
 			'cantidad_recibida', 
-			'faltante', 
+			'costo_faltante', 
 			]
 		widgets = {
 			'id':forms.HiddenInput,
@@ -139,14 +138,14 @@ class fLiquidaDetalleOrdenRuta(forms.ModelForm):
 
 	class Meta:
 		model = models.DetalleOrdenRuta
-		exclude = ['vendido', 'faltante']
+		exclude = ['costo_vendido', 'costo_faltante']
 		widgets = {
 			'id':forms.HiddenInput,
 			'orden':forms.HiddenInput,
 			'producto':forms.TextInput(attrs={'readonly':True}),
 			'unidad_medida':forms.TextInput(attrs={'readonly':True}),
 			'cantidad_entregada':forms.TextInput(attrs={'readonly':True}),
-			'total':forms.TextInput(attrs={'readonly':True}),
+			'costo_total':forms.TextInput(attrs={'readonly':True}),
 		}
 
 

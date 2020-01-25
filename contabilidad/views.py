@@ -275,6 +275,7 @@ def eliminar_detalle_asiento(request, _id):
 	elif request.method == 'POST':
 		
 		detalle = get_object_or_404(models.DetalleAsiento, pk=_id)
+		
 		id_asiento = detalle.asiento.id
 
 		detalle.delete()

@@ -147,25 +147,25 @@ class OrdenRuta(models.Model):
 	digitador = models.ForeignKey(Empleado, on_delete=models.PROTECT)
 	autorizado = models.BooleanField(default=False)
 	autorizado_por = models.ForeignKey(Empleado, on_delete=models.PROTECT, null=True)
-	liquidado = models.BooleanField(default=False)
-	liquidado_por = models.ForeignKey(Empleado, on_delete=models.PROTECT, null=True)
 	anulado = models.BooleanField(default=False)
 	entregado = models.BooleanField(default=False)
 	entregado_por = models.ForeignKey(Empleado, on_delete=models.PROTECT, null=True)
 	recibido_por = models.ForeignKey(Empleado, on_delete=models.PROTECT, null=True)
+	liquidado = models.BooleanField(default=False)
+	liquidado_por = models.ForeignKey(Empleado, on_delete=models.PROTECT, null=True)
 	observaciones = models.CharField(max_length=400, null=True)
 
 class DetalleOrdenRuta(models.Model):
 	"""Modelo de datos para DetalleOrdenDeRuta"""
-	orden = models.ForeignKey(OrdenRuta)
+	orden = models.ForeignKey(OrdenRuta, on_delete=models.CASCADE)
 	producto = models.ForeignKey(Producto, on_delete=models.PROTECT)
 	unidad_medida = models.ForeignKey(Unidad, on_delete=models.PROTECT)
 	cantidad_entregada = models.DecimalField(max_digits=4, decimal_places=2)
-	total = models.DecimalField('Costo Total', max_digits=6, decimal_places=2, default=0.00)
+	costo_total = models.DecimalField('Costo Total', max_digits=6, decimal_places=2, default=0.00)
 	cantidad_vendida = models.DecimalField(max_digits=4, decimal_places=2, default=0.00)
-	vendido = models.DecimalField('Venta', max_digits=6, decimal_places=2, default=0.00)
+	costo_vendido = models.DecimalField('Venta', max_digits=6, decimal_places=2, default=0.00)
 	cantidad_recibida = models.DecimalField(max_digits=4, decimal_places=2, default=0.00)
-	faltante = models.DecimalField('Costo Faltante', max_digits=6, decimal_places=2, null=True)
+	costo_faltante = models.DecimalField('Costo Faltante', max_digits=6, decimal_places=2, null=True)
 
 		
 						
