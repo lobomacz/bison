@@ -21,13 +21,11 @@ class EmpleadoUsuarioForm(forms.Form):
 	password = forms.CharField(min_length=8, max_length=25, widget=forms.PasswordInput)
 	activo = forms.BooleanField()
 
+
 class EmpleadoForm(forms.ModelForm):
     class Meta:
         model = models.Empleado
         fields = '__all__'
-        widgets = {
-        	'id':forms.HiddenInput,
-        }
     
 		
 class AsignaUsuarioForm(forms.Form):

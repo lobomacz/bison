@@ -16,7 +16,12 @@ class AsientoForm(forms.ModelForm):
 	
 	class Meta:
 		model = models.Asiento
-		fields = '__all__'
+		exclude = [
+		 'contabilizado',
+		 'fecha_contabilizado',
+		 'anulado',
+		 'fecha_anulado',
+		 ]
 		widgets = {
 			'id':forms.HiddenInput
 		}
@@ -28,7 +33,8 @@ class DetalleAsientoForm(forms.ModelForm):
 		model = models.DetalleAsiento
 		fields = '__all__'
 		widgets = {
-			'id':forms.HiddenInput
+			'id':forms.HiddenInput,
+			'asiento':forms.HiddenInput,
 		}
 
 class EjercicioForm(forms.ModelForm):
@@ -46,7 +52,8 @@ class PeriodoForm(forms.ModelForm):
 		model = models.PeriodoContable
 		fields = '__all__'
 		widgets = {
-			'id':forms.HiddenInput
+			'id':forms.HiddenInput,
+			'ejercicio':forms.HiddenInput,
 		}
 		
 

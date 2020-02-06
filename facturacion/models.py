@@ -28,6 +28,10 @@ class Factura(models.Model):
 
 	class Meta:
 		ordering = ['no_documento', 'fecha']
+		permissions = [
+			('anular_factura', 'Anular facturas'),
+			('imprimir_factura', 'Imprimir facturas'),
+		]
 		indexes = [
 			models.Index(fields=['no_documento', 'tipo', 'vendedor'])
 		]
@@ -65,7 +69,11 @@ class Proforma(models.Model):
 	total = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 
 	class Meta:
-		ordering = ['fecha']
+		ordering = ['fecha', 'cliente']
+		permissions = [
+			('anular_proforma', 'Anular proformas'),
+			('imprimir_proforma', 'Imprimir proformas'),
+		]
 		indexes = [
 			models.Index(fields=['vendedor'])
 		]
@@ -154,6 +162,14 @@ class OrdenRuta(models.Model):
 	liquidado = models.BooleanField(default=False)
 	liquidado_por = models.ForeignKey(Empleado, on_delete=models.PROTECT, null=True)
 	observaciones = models.CharField(max_length=400, null=True)
+
+	class Meta:
+		ordering = ['fecha', 'ruta']
+		permissions = [
+			('autorizar_ordenruta', 'Autoriza ordenes de ruta'),
+			('anular_ordenruta', 'Anular ordenes de ruta'),
+			('liquidar_ordenruta', 'Liquidar ordenes de ruta'),
+		]
 
 class DetalleOrdenRuta(models.Model):
 	"""Modelo de datos para DetalleOrdenDeRuta"""

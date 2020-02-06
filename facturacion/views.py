@@ -7,14 +7,9 @@ from bison.core.models import Empleado
 from . import models, forms
 import datetime, calendar
 
+
+
 # Create your views here.
-
-def get_empleado_object(_id):
-
-	empleado = get_object_or_404(models.Empleado. usuario__usuario__id=_id)
-
-	return empleado
-
 
 @login_required
 @permission_required(['facturacion.view_ordenruta', 'facturacion.view_factura'])
@@ -24,26 +19,22 @@ def index(request):
 
 	periodo = models.Periodo.objects.get(activo=True)
 
-	empleado = get_empleado_object(request.user.id)
-
-	c = {'titulo':'Menú de Ventas', 'seccion':'Facturación', 'empresa':empresa, 'periodo':periodo, 'empleado':empleado}
+	c = {'titulo':'Menú de Ventas', 'seccion':'Facturación', 'empresa':empresa, 'periodo':periodo}
 	
 	return render(request, 'indice.html', c)
 
 
 @login_required
 @permission_required('facturacion.view_factura')
-def ventas_periodo(request, _id):
+def ventas_periodo(request):
 
-	periodo = get_object_or_404(models.Periodo, pk=_id)
+	periodo = models.Periodo.objects.get(activo=True)
 
 	facturas = models.Factura.objects.filter(fecha__gte=periodo.fecha_inicio, fecha__lte=periodo.fecha_final)
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	empleado = get_empleado_object(request.user.id)
-
-	c = {'empresa':empresa, 'facturas':facturas, 'periodo':periodos, 'seccion':'Facturación', 'titulo':'Ventas del período ', 'empleado':empleado}
+	c = {'empresa':empresa, 'facturas':facturas, 'periodo':periodos, 'seccion':'Facturación', 'titulo':'Ventas del período '}
 
 	return render(request, 'ventas_periodo.html', c)
 
@@ -57,9 +48,7 @@ def ventas_rango(request, inicio, final):
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	empleado = get_empleado_object(request.user.id)
-
-	c = {'empresa':empresa, 'titulo':'Ventas por Rango de Fechas', 'seccion':'Facturación', 'facturas':facturas, 'empleado':empleado}
+	c = {'empresa':empresa, 'titulo':'Ventas por Rango de Fechas', 'seccion':'Facturación', 'facturas':facturas}
 
 	return render(request, 'ventas_rango.html', c)
 
@@ -74,15 +63,13 @@ def lista_proformas(request, todas=None):
 	
 	empresa = settings.NOMBRE_EMPRESA
 
-	empleado = get_empleado_object(request.user.id)
-
 	proformas = get_list_or_404(models.Proforma, anulado=False, fecha__gte=expire.strftime('%Y-%m-%d'))
 
 	if todas != None:
 		
 		proformas = get_list_or_404(models.Proforma)
 
-	c = {'titulo':'Listado de Proformas', 'seccion':'Facturación', 'empresa':empresa, 'proformas':proformas, 'empleado':empleado}
+	c = {'titulo':'Listado de Proformas', 'seccion':'Facturación', 'empresa':empresa, 'proformas':proformas}
 
 	return render(request, 'lista_proformas.html', c)
 
@@ -93,11 +80,9 @@ def lista_proformas_rango(request, inicio, final):
 	
 	empresa = settings.NOMBRE_EMPRESA
 
-	empleado = get_empleado_object(request.user.id)
-
 	proformas = get_list_or_404(models.Proforma, fecha__gte=inicio, fecha__lte=final)
 
-	c = {'titulo':'Listado de Proformas', 'seccion':'Facturación', 'empresa':empresa, 'proformas':proformas, 'empleado':empleado}
+	c = {'titulo':'Listado de Proformas', 'seccion':'Facturación', 'empresa':empresa, 'proformas':proformas}
 
 	return render(request, 'lista_proformas.html', c)
 
@@ -111,9 +96,7 @@ def ver_proforma(request, _id):
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	empleado = get_empleado_object(request.user.id)
-
-	return render(request, 'ver_proforma.html', {'titulo':'Detalle de Proforma', 'seccion':'Facturación', 'proforma':proforma, 'empleado':empleado})
+	return render(request, 'ver_proforma.html', {'titulo':'Detalle de Proforma', 'seccion':'Facturación', 'proforma':proforma})
 
 
 
@@ -131,11 +114,9 @@ def detalle_proforma(request, _id):
 
 		empresa = settings.NOMBRE_EMPRESA
 
-		empleado = get_empleado_object(request.user.id)
-
 		formset = DetalleFormset(instance=proforma)
 
-		c = {'titulo':'Detalle de Proforma', 'seccion':'Facturación', 'empresa':empresa, 'formset':formset, 'id':_id, 'empleado':empleado}
+		c = {'titulo':'Detalle de Proforma', 'seccion':'Facturación', 'empresa':empresa, 'formset':formset, 'id':_id}
 
 		return render(request, 'detalle_proforma.html', c)
 
@@ -184,15 +165,13 @@ def detalle_proforma(request, _id):
 @permission_required('facturacion.add_proforma')
 def nueva_proforma(request):
 
-	empleado = get_empleado_object(request.user.id)
-
 	if request.method == "GET":
 		
 		empresa = settings.NOMBRE_EMPRESA
 
 		form = forms.fProforma()
 
-		c = {'titulo':'Ingreso de Proforma', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'empleado':empleado}
+		c = {'titulo':'Ingreso de Proforma', 'seccion':'Facturación', 'empresa':empresa, 'form':form}
 
 		return render(request, 'form_proforma.html', c)
 
@@ -203,6 +182,8 @@ def nueva_proforma(request):
 			form = forms.fProforma(request.POST)
 
 			if form.is_valid():
+
+				empleado = request.user.usuario.empleado if request.user.usuario != None else None
 				
 				proforma = form.save(commit=False)
 
@@ -233,11 +214,9 @@ def editar_proforma(request, _id):
 		
 		empresa = settings.NOMBRE_EMPRESA
 
-		empleado = get_empleado_object(request.user.id)
-
 		form = forms.fProforma(proforma)
 
-		c = {'titulo':'Editar Proforma', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'id':_id, 'empleado':empleado}
+		c = {'titulo':'Editar Proforma', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'id':_id}
 
 		return render(request, 'form_proforma.html', c)
 
@@ -256,24 +235,73 @@ def editar_proforma(request, _id):
 			return render(request, 'error.html', {'mensaje':'No se validaron los datos de Proforma. Revise y vuelva a intentarlo.', 'titulo':'Error de Validación', 'view':'vListaProformas'})
 
 
-
 @login_required
-@permission_required('facturacion.change_proforma')
-def anular_proforma(request, _id):
+@permission_required(['facturacion.add_proforma', 'facturacion.change_proforma'])
+def reemitir_proforma(request, _id):
 
-	empleado = get_empleado_object(request.user.id)
+	proforma = get_object_or_404(models.Proforma, pk=_id)
+
+	hoy = datetime.datetime.today()
+
+	diferencia = abs(hoy - proforma.fecha)
+
+	if diferencia.days > 1:
+		
+		return render(request, 'error.html', {'mensaje':'La Proforma aún se encuentra vigente. No es posible reemitirla.', 'titulo':'Proforma Vigente', 'view':'vListaProformas'})
 
 	if request.method == "GET":
 		
 		empresa = settings.NOMBRE_EMPRESA
 
-		c = {'empresa':empresa, 'id':_id, 'view':'vAnularProforma', 'titulo':'Anular Proforma', 'mensaje':'Se anulará la proforma.', 'empleado':empleado}
+		c = {'titulo':'Reemitir Proforma', 'view':'vReemitirProforma', 'id':_id, 'seccion':'Facturación', 'empresa':empresa, 'mensaje':'Confirme que desea reemitir la proforma, por favor.'}
+
+		return render(request, 'warning_template.html', c)
+
+	elif request.method == POST:
+
+		proforma = get_object_or_404(models.Proforma, pk=_id)
+
+		detalle = proforma.detalleproforma_set.all()
+
+		empleado = request.user.usuario.empleado if request.user.usuario != None else None
+
+		proforma.id = None
+
+		proforma.fecha = hoy
+
+		proforma.vendedor = empleado
+
+		proforma = proforma.save()
+
+		for linea in detalle:
+
+			linea.id = None
+
+			linea.proforma = proforma
+
+			linea.save()
+
+		return redirect('lista_proformas')
+
+
+
+@login_required
+@permission_required('facturacion.change_proforma')
+def anular_proforma(request, _id):
+
+	if request.method == "GET":
+		
+		empresa = settings.NOMBRE_EMPRESA
+
+		c = {'empresa':empresa, 'id':_id, 'view':'vAnularProforma', 'titulo':'Anular Proforma', 'mensaje':'Se anulará la proforma.', 'seccion':'Facturación'}
 
 		return render(request, 'warning_template.html', c)
 
 	elif request.method == "POST":
 
 		proforma = get_object_or_404(models.Proforma, pk=_id)
+
+		empleado = request.user.usuario.empleado if request.user.usuario != None else None
 
 		proforma.anulado = True
 
@@ -293,9 +321,7 @@ def ver_factura(request, _id):
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	empleado = get_empleado_object(request.user.id)
-
-	c = {'titulo':'Factura', 'seccion':'Facturación', 'factura':factura, 'empresa':empresa, 'empleado':empleado}
+	c = {'titulo':'Factura', 'seccion':'Facturación', 'factura':factura, 'empresa':empresa}
 
 	return render(request, 'ver_factura.html', c)
 
@@ -318,9 +344,7 @@ def detalle_factura(request, _id):
 
 		empresa = settings.NOMBRE_EMPRESA
 
-		empleado = get_empleado_object(request.user.id)
-
-		c = {'titulo':'Detalle de Factura', 'seccion':'Facturación', 'empresa':empresa, 'formset':formset, 'id':_id, 'empleado':empleado}
+		c = {'titulo':'Detalle de Factura', 'seccion':'Facturación', 'empresa':empresa, 'formset':formset, 'id':_id}
 
 		return render(request, 'detalle_factura.html', c)
 
@@ -368,15 +392,13 @@ def detalle_factura(request, _id):
 @permission_required('facturacion.add_factura')
 def nueva_factura(request):
 
-	empleado = get_empleado_object(request.user.id)
-
 	if request.method == "GET":
 		
 		form = forms.fFactura()
 
 		empresa = settings.NOMBRE_EMPRESA
 
-		c = {'titulo':'Nueva Factura', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'empleado':empleado}
+		c = {'titulo':'Nueva Factura', 'seccion':'Facturación', 'empresa':empresa, 'form':form}
 
 		return render(request, 'form_factura.html', c)
 
@@ -385,6 +407,8 @@ def nueva_factura(request):
 		form = forms.fFactura(request.POST)
 
 		if form.is_valid():
+
+			empleado = request.user.usuario.empleado if request.user.usuario != None else None
 			
 			factura = form.save(commit=False)
 
@@ -413,9 +437,7 @@ def editar_factura(request, _id):
 
 		empresa = settings.NOMBRE_EMPRESA
 
-		empleado = get_empleado_object(request.user.id)
-
-		c = {'titulo':'Edición de Factura', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'empleado':empleado}
+		c = {'titulo':'Edición de Factura', 'seccion':'Facturación', 'empresa':empresa, 'form':form}
 
 		return render(request, 'form_factura.html', c)
 
@@ -443,9 +465,7 @@ def lista_ordenes_ruta(request):
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	empleado = get_empleado_object(request.user.id)
-
-	c = {'titulo':'Indice de Ordenes de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'ordenes':ordenes, 'empleado':empleado}
+	c = {'titulo':'Indice de Ordenes de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'ordenes':ordenes}
 
 	return render(request, 'lista_ordenes_ruta.html', c)
 	
@@ -459,9 +479,7 @@ def ver_orden_ruta(request, _id):
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	empleado = get_empleado_object(request.user.id)
-
-	c = {'titulo':'Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'orden':orden, 'empleado':empleado}
+	c = {'titulo':'Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'orden':orden}
 
 	return render(request, 'ver_orden_ruta.html', c)
 
@@ -484,8 +502,6 @@ def detalle_orden_ruta(request, _id):
 	if request.method == "GET":
 		
 		empresa = settings.NOMBRE_EMPRESA
-
-		empleado = get_empleado_object(request.user.id)
 
 		formset = DetalleFormset(instance=orden)
 
@@ -521,15 +537,13 @@ def detalle_orden_ruta(request, _id):
 @permission_required('facturacion.add_ordenruta')
 def nueva_orden_ruta(request):
 
-	empleado = get_empleado_object(request.user.id)
-
 	if request.method == "GET":
 		
 		empresa = settings.NOMBRE_EMPRESA
 
 		form = forms.fOrdenRuta()
 
-		c = {'titulo':'Nueva Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'empleado':empleado}
+		c = {'titulo':'Nueva Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'form':form}
 
 		return render(request, 'form_orden_ruta.html', c)
 
@@ -538,6 +552,8 @@ def nueva_orden_ruta(request):
 		form = forms.fOrdenRuta(request.POST)
 
 		if form.is_valid():
+
+			empleado = request.user.usuario.empleado if request.user.usuario != None else None
 			
 			orden = form.save(commit=False)
 
@@ -565,9 +581,7 @@ def editar_orden_ruta(request, _id):
 
 		empresa = settings.NOMBRE_EMPRESA
 
-		empleado = get_empleado_object(request.user.id)
-
-		c = {'titulo':'Editar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'id':orden.id, 'empleado':empleado}
+		c = {'titulo':'Editar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'id':orden.id}
 
 		return render(request, 'form_orden_ruta.html', c)
 
@@ -599,15 +613,17 @@ def autorizar_orden_ruta(request, _id):
 		
 			empresa = settings.NOMBRE_EMPRESA
 
-			empleado = get_empleado_object(request.user.id)
-
 			c = {'titulo':'Autorizar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'mensaje':'Se autorizará la orden de ruta.', 'view':'vAutorizarOrdenRuta', 'id':orden.id, 'empleado':empleado}
 
 			return render(request, 'warning_template.html', c)
 
 		elif request.method == "POST":
 
+			empleado = request.user.usuario.empleado if request.user.usuario != None else None
+
 			orden.autorizado = True
+
+			orden.autorizado_por = empleado
 
 			orden.save()
 
@@ -634,15 +650,13 @@ def entregar_orden_ruta(request, _id):
 			
 			empresa = settings.NOMBRE_EMPRESA
 
-			empleado = get_empleado_object(request.user.id)
-
-			c = {'titulo':'Entregar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'view':'vEntregarOrdenRuta', 'id':orden.id, 'empleado':empleado}
+			c = {'titulo':'Entregar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'view':'vEntregarOrdenRuta', 'id':orden.id}
 
 			return render(request, 'entregar_orden_ruta.html', c)
 
 		elif request.method == 'POST':
 			
-			empleado = get_empleado_object(request.user.id)
+			empleado = request.user.usuario.empleado if request.user.usuario != None else None
 
 			orden.entregado = True
 
@@ -665,9 +679,7 @@ def eliminar_orden_ruta(request, _id):
 			
 			empresa = settings.NOMBRE_EMPRESA
 
-			empleado = get_empleado_object(request.user.id)
-
-			c = {'titulo':'Eliminar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'mensaje':'Se eliminará la orden de ruta.', 'view':'vEliminarOrdenRuta', 'id':orden.id, 'empleado':empleado}
+			c = {'titulo':'Eliminar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'mensaje':'Se eliminará la orden de ruta.', 'view':'vEliminarOrdenRuta', 'id':orden.id}
 
 			return render(request, 'warning_template.html', c)
 
@@ -680,13 +692,13 @@ def eliminar_orden_ruta(request, _id):
 
 @login_required
 @permission_required('facturacion.delete_detalleordenruta')
-def eliminar_detalle_orden_ruta(request, _id, _idd):
+def eliminar_detalle_orden_ruta(request, _id):
 	
-	orden = get_object_or_404(models.OrdenRuta, pk=_id)
+	orden = get_object_or_404(models.DetalleOrdenRuta, pk=_id).orden
 
 	if orden.autorizado or orden.anulado:
 		
-		return render(request, 'error.html', {'titulo':'Error!', 'seccion':'Facturación', 'mensaje':'No se puede eliminar la línea de detalle.', 'view':'vVerOrdenRuta', 'id':_id})
+		return render(request, 'error.html', {'titulo':'Error!', 'seccion':'Facturación', 'mensaje':'No se puede eliminar la línea de detalle.', 'view':'vListaOrdenesRuta'})
 
 	else:
 
@@ -694,9 +706,7 @@ def eliminar_detalle_orden_ruta(request, _id, _idd):
 			
 			empresa = settings.NOMBRE_EMPRESA
 
-			empleado = get_empleado_object(request.user.id)
-
-			c = {'titulo':'Eliminar Detalle de Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'mensaje':'Se eliminará la línea de detalle de la orden de ruta.', 'view':'vEliminarDetalleOrdenRuta', 'id':orden.id, 'idd':'_idd', 'empleado':empleado}
+			c = {'titulo':'Eliminar Detalle de Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'mensaje':'Se eliminará la línea de detalle de la orden de ruta.', 'view':'vEliminarDetalleOrdenRuta', 'id':orden.id, 'idd':'_idd'}
 
 			return render(request, 'warning_template.html', c)
 
@@ -725,11 +735,9 @@ def liquidar_orden_ruta(request, _id):
 		
 		empresa = settings.NOMBRE_EMPRESA
 
-		empleado = get_empleado_object(request.user.id)
-
 		formset = DetalleFormset(instance=orden)
 
-		c = {'titulo':'Liquidación de Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'empleado':empleado, 'formset':formset, 'view':'vLiquidarOrdenRuta', 'id':orden.id}
+		c = {'titulo':'Liquidación de Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'formset':formset, 'view':'vLiquidarOrdenRuta', 'id':orden.id}
 
 		return render(request, 'form_orden_ruta.html', c)
 
@@ -754,7 +762,7 @@ def liquidar_orden_ruta(request, _id):
 
 			if not orden.detalleordenruta_set.all().aggregate(Sum('costo_faltante')) > 0.00:
 				
-				empleado = get_empleado_object(request.user.id)
+				empleado = request.user.usuario.empleado if request.user.usuario != None else None
 
 				orden.liquidado = True
 

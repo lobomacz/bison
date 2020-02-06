@@ -6,14 +6,14 @@ from django.contrib.auth.models import User
 class Usuario(models.Model):
 
 	"""Modelo de datos para Usuario"""
-	usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+	usuario = models.OneToOneField(User, on_delete=models.CASCADE)
 
 	class Meta:
 
 		permissions = [
-			('administrar_usuarios', 'Administrar los usuarios.'),
-			('cambiar_contrasena', 'Cambiar la contraseña de usuario.'),
+			('reasignar_contrasena', 'Cambiar la contraseña de usuario.'),
 			('asignar_usuario', 'Puede asignar usuarios a empleados.'),
+			('password_usuario', 'Cambiar propia contraseña de usuario.'),
 		]
 
 
@@ -30,13 +30,13 @@ class Empleado(models.Model):
 	direccion = models.CharField(max_length=200)
 	correo = models.EmailField('Email', unique=True)
 	usuario = models.OneToOneField(Usuario, null=True, on_delete=models.SET_NULL, default=None)
-	notificar = models.CharField(max_length=1, choices=[('n', 'nada'), ('a', 'anulaciones'), ('o', 'orden de ruta'), ('p', 'proformas')], default='n')
+	notificar = models.CharField(max_length=1, choices=[('n', 'nada'), ('a', 'anulaciones'), ('o', 'orden de ruta'), ('p', 'proformas'), ('f', 'facturas'), ('t', 'todo')], default='n')
 	activo = models.BooleanField(default=True)
 
 
 	class Meta:
+		ordering = ['apellido', 'nombre']
 		permissions = [
-			('administrar_empleados', 'Puede administrar empleados.'),
 			('desactivar_empleado', 'Puede desactivar un empleado.'),
 		]
 		indexes = [
@@ -54,7 +54,7 @@ class Categoria(models.Model):
 
 	class Meta:
 		permissions = [
-			('administrar_categorias', 'Puede administrar categorias de productos.'),
+			('administrar_categoria', 'Puede administrar categorias de productos.'),
 		]
 
 	def __str__(self):

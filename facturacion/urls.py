@@ -6,7 +6,7 @@ app_name = 'facturacion'
 urlpatterns = [
 	path('', views.index, name = 'vIndexFacturacion'),
 	path('ventas/', include([
-		path('periodo/<int:_id>/', views.ventas_periodo, name='vVentasPeriodo'),
+		path('periodo/', views.ventas_periodo, name='vVentasPeriodo'),
 		path('rango/<str:inicio>/<str:final>/', views.ventas_rango, name='vVentasRango'),
 		])),
 	path('proformas/', include([
@@ -16,6 +16,7 @@ urlpatterns = [
 		path('nueva/', views.nueva_proforma, name='vNuevaProforma'),
 		path('ver/<int:_id>/', views.ver_proforma, name='vVerProforma'),
 		path('editar/<int:_id>/', views.editar_proforma, name='vEditarProforma'),
+		path('reemitir/<int:_id>/', views.reemitir_proforma, name='vReemitirProforma'),
 		path('detalle/editar/<int:_id>/', views.editar_detalle_proforma, name='vEditarDetalleProforma'),
 		path('anular/', views.anular_proforma, name='vAnularProforma'),
 		])),
@@ -45,7 +46,7 @@ urlpatterns = [
 		path('entregar/<int:_id>/', views.entregar_orden_ruta, name='vEntregarOrdenRuta'),
 		path('anular/<int:_id>/', views.anular_orden_ruta, name='vAnularOrdenRuta'),
 		path('liquidar/<int:_id>/', views.liquidar_orden_ruta, name='vLiquidarOrdenRuta'),
-		path('<int:_id>/detalle/<int:_idd>/eliminar/', views.eliminar_detalle_orden_ruta, name='vEliminarDetalleOrdenRuta'),
+		path('detalle/<int:_id>/eliminar/', views.eliminar_detalle_orden_ruta, name='vEliminarDetalleOrdenRuta'),
 		#path('detalle/<int:_id>/entregar/', views.entregar_detalle_orden_ruta, name='vEntregarDetalleOrdenRuta'),
 		path('por-fecha/<str:fecha>/', views.ordenRutaPorFecha, name='vOrdenRutaPorFecha'),
 		path('por-vendedor/<int:_id>/', views.ordenRutaPorVendedor, name='vOrdenRutaPorVendedor'),
