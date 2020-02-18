@@ -25,12 +25,12 @@ class EmpleadoUsuarioForm(forms.Form):
 class EmpleadoForm(forms.ModelForm):
     class Meta:
         model = models.Empleado
-        fields = '__all__'
+        exclude = ['usuario']
     
 		
 class AsignaUsuarioForm(forms.Form):
 
-	usuarios = models.Usuario.objects.filter(empleado__usuario__isnull=True)
+	usuarios = models.Usuario.objects.filter(empleado__isnull=True)
 	id_usuario = forms.CharField(choices=usuarios, label='Usuario')
 
 class UsuarioForm(forms.ModelForm):

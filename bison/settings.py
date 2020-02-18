@@ -142,6 +142,8 @@ NOMBRE_PROYECTO = 'Business Integrated System Online'
 
 MONTO_IVA = 0.15
 
+LIMITE_FILAS = 20
+
 LOGOUT_REDIRECT_URL = '/core/login/'
 
 LOGIN_URL = '/core/login/'

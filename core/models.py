@@ -7,6 +7,7 @@ class Usuario(models.Model):
 
 	"""Modelo de datos para Usuario"""
 	usuario = models.OneToOneField(User, on_delete=models.CASCADE)
+	activo = models.BooleanField(default=True)
 
 	class Meta:
 
