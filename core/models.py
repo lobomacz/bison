@@ -1,21 +1,9 @@
 from django.db import models
+from django.urls import reverse
 from django.contrib.auth.models import User
 
 
 # Create your models here.
-class Usuario(models.Model):
-
-	"""Modelo de datos para Usuario"""
-	usuario = models.OneToOneField(User, on_delete=models.CASCADE)
-	activo = models.BooleanField(default=True)
-
-	class Meta:
-
-		permissions = [
-			('reasignar_contrasena', 'Cambiar la contraseña de usuario.'),
-			('asignar_usuario', 'Puede asignar usuarios a empleados.'),
-			('password_usuario', 'Cambiar propia contraseña de usuario.'),
-		]
 
 
 class Empleado(models.Model):
@@ -30,8 +18,8 @@ class Empleado(models.Model):
 	sexo = models.CharField(max_length=1, choices=[('m', 'Masculino'), ('f', 'Femenino')])
 	direccion = models.CharField(max_length=200)
 	correo = models.EmailField('Email', unique=True)
-	usuario = models.OneToOneField(Usuario, null=True, on_delete=models.SET_NULL, default=None)
-	notificar = models.CharField(max_length=1, choices=[('n', 'nada'), ('a', 'anulaciones'), ('o', 'orden de ruta'), ('p', 'proformas'), ('f', 'facturas'), ('t', 'todo')], default='n')
+	usuario = models.OneToOneField(User, null=True, on_delete=models.SET_NULL, default=None)
+	notificar = models.CharField(max_length=2, choices=[('n', 'nada'), ('a', 'anulaciones'), ('o', 'orden de ruta'), ('p', 'proformas'), ('f', 'facturas'), ('t', 'todo')], default='n')
 	activo = models.BooleanField(default=True)
 
 
@@ -39,14 +27,18 @@ class Empleado(models.Model):
 		ordering = ['apellido', 'nombre']
 		permissions = [
 			('desactivar_empleado', 'Puede desactivar un empleado.'),
+			('asignar_empleado', 'Puede asignar un usuario al empleado.'),
 		]
 		indexes = [
 			models.Index(fields=['correo', 'nombre', 'apellido'])
 		]
 
 	def __str__(self):
-
 		return '{0} {1}'.format(self.nombre, self.apellido)
+
+	def get_absolute_url(self):
+		return reverse('vVerEmpleado', {'_id':self.cedula})
+
 
 
 class Categoria(models.Model):
@@ -59,8 +51,8 @@ class Categoria(models.Model):
 		]
 
 	def __str__(self):
-
 		return self.nombre
+
 
 
 class Unidad(models.Model):

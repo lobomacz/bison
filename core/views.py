@@ -1,4 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404, get_list_or_404
+from django.urls import reverse
+from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required, permission_required
@@ -9,6 +11,7 @@ from django.conf import settings
 #from django.apps import apps
 from django.forms import formset_factory, modelformset_factory
 from . import forms, models
+import logging
 
 # Create your views here.
 
@@ -29,7 +32,7 @@ def index(request):
 
 	}
 
-	return render(request, 'indice.html', c)
+	return render(request, 'core/indice.html', c)
 
 
 def bison_login(request):
@@ -37,7 +40,7 @@ def bison_login(request):
 	if request.method == "GET":
 		
 		form = LoginForm()
-		return render(request, 'login.html', {'form':form})
+		return render(request, 'core/login.html', {'form':form})
 	
 	else:
 
@@ -66,6 +69,11 @@ def bison_logout(request):
 	return redirect('bison_login')
 
 
+@login_required
+def error(request):
+
+	return render(request, 'core/error.html')
+
 
 @login_required
 @permission_required('core.administrar_empleado')
@@ -90,7 +98,8 @@ def lista_empleados(request, page, todos=False):
 	empresa = getNombreEmpresa()
 
 	c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'listado de empleados', 'empleados':empleados, 'todos':todos}
-	return render(request, 'lista_empleados.html', c)
+	
+	return render(request, 'core/lista_empleados.html', c)
 
 
 
@@ -100,14 +109,18 @@ def ver_empleado(request, _id):
 		
 	empleado = get_object_or_404(models.Empleado, pk=_id)
 	empresa = getNombreEmpresa()
-	c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'datos de empleado', 'empleado':empleado}
-	return render(request, 'ver_empleado.html', c)
+	ruta_delete = reverse('vEliminarEmpleado', {'_id':empleado.cedula})
+	ruta_edit = reverse('vEditarEmpleado', {'_id':empleado.cedula})
+	c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'datos de empleado', 'empleado':empleado, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
+	return render(request, 'core/ver_empleado.html', c)
 
 
 
 @login_required
 @permission_required('core.add_empleado')
 def nuevo_empleado(request):
+
+	ruta = 'vNuevoEmpleado'
 	
 	if request.method == "GET":
 		
@@ -115,25 +128,46 @@ def nuevo_empleado(request):
 
 		empresa = getNombreEmpresa()
 
-		c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'nuevo empleado', 'form':form, 'ruta':'vNuevoEmpleado'}
+		c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'nuevo empleado', 'form':form, 'ruta':ruta}
+
+		messages.info(request, 'Los campos con * son obligatorios')
 		
-		return render(request, 'forms/form_template.html', c)
+		return render(request, 'core/forms/form_template.html', c)
 	
-	else if request.method == "POST":
+	else if request.method == "POST": 
 		
 		form = forms.EmpleadoForm(request.POST)
+
+		empleado = None
 		
 		if form.is_valid():
 
-			form.save()
+			try:
+				
+				empleado = form.save(commit=False)
+
+				empleado.save()
+
+			except Exception as e:
+				
+				messages.error(request,"Excepción al registrar empleado.")
+
+				logging.error(e)
+
+				return redirect(reverse('vError'))
 			
-			return redirect('lista_empleados')
+			messages.success(request,"Empleado ingresado con éxito")
+
+			return redirect('ver_empleado', {'_id':empleado.cedula})
+
 		
 
 
 @login_required
 @permission_required(('core.add_empleado', 'core.add_usuario', 'core.asignar_usuario'))
 def nuevo_empleado_usuario(request):
+
+	ruta = reverse('vNuevoEmpleadoUsuario')
 	
 	if request.method == "GET":
 		
@@ -141,36 +175,45 @@ def nuevo_empleado_usuario(request):
 
 		empresa = getNombreEmpresa()
 
-		c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'registro de empleado con usuario', 'form':form, 'ruta':'vNuevoEmpleadoUsuario'}
+		c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'registro de empleado con usuario', 'form':form, 'ruta':ruta}
+
+		messages.info(request, 'Los campos con * son obligatorios')
 		
-		return render(request, 'forms/form_template.html', c)
+		return render(request, 'core/forms/form_template.html', c)
 	
 	elif request.method == "POST":
 
 		form = forms.EmpleadoUsuarioForm(request.POST)
 
-		if form.is_valid():
+		if form.is_valid(): 
 		
-			datos = request.POST
+			datos = form.cleaned_data #request.POST
+			user = None
+			empleado = None
 
-			user = User.objects.create_user(datos['correo'], datos['correo'], datos['password'], first_name=datos['nombre'], last_name=datos['apellido'])
+			try:
 			
-			user.save()
+				user = User.objects.create_user(datos['correo'], datos['correo'].upper().strip(), datos['password'], first_name=datos['nombre'].upper().strip(), last_name=datos['apellido'].upper().strip())
 
-			#user = User.objects.get(username=datos['correo'])
-			usuario = models.Usuario()
+				empleado = form.save(commit=False) # models.Empleado(datos)
 
-			usuario.usuario = user
+				empleado.usuario = user
 
-			usuario.save()
+				empleado.save()
 
-			empleado = models.Empleado(datos)
+			except Exception as e:
+				
+				messages.error(request,"Excepción al registrar empleado.")
 
-			empleado.usuario = usuario
+				logging.error(e)
 
-			empleado.save()
+				return redirect(reverse('vError'))
+
+			messages.success(request,"Empleado registrado con éxito")
+
+			return redirect('ver_empleado', {'_id':empleado.cedula})
+
 			
-			return redirect('lista_empleados')
 
 
 @login_required
@@ -181,23 +224,39 @@ def editar_empleado(request, _id):
 		
 		empleado = get_object_or_404(models.Empleado, pk=_id)
 
-		form = forms.EmpleadoForm(empleado)
+		ruta = reverse('vEditarEmpleado', {'_id':empleado.cedula})
+
+		form = forms.EditEmpleadoForm(empleado)
 
 		empresa = getNombreEmpresa()
 
-		c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'edición de datos de empleado', 'form':form, 'ruta':'vEditarEmpleado', 'id':_id}
+		c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'edición de datos de empleado', 'form':form, 'ruta':ruta}
+
+		messages.info(request, 'Los campos con * son obligatorios')
 		
-		return render(request, 'core/form_template.html', c)
+		return render(request, 'core/forms/form_template.html', c)
 	
-	elif request.method == "POST":
+	elif request.method == "POST": 
 		
 		empleado = models.Empleado.objects.get(pk=_id)
 
-		form = forms.EmpleadoForm(request.POST, instance=empleado)
+		form = forms.EditEmpleadoForm(request.POST, instance=empleado)
 
 		if form.is_valid():
 
-			form.save()
+			try:
+				
+				form.save()
+
+			except Exception as e:
+				
+				messages.error(request,"Excepción al actualizar registro de empleado")
+
+				logging.error(e)
+
+				return redirect(reverse('vError'))
+			
+			messages.success(request, "El registro se actualizó con éxito")
 
 			return redirect('ver_empleado', {'_id':_id})
 
@@ -207,18 +266,30 @@ def editar_empleado(request, _id):
 @permission_required('core.delete_empleado')
 def eliminar_empleado(request, _id):
 
-	if request.method == "POST":
+	if request.method == "POST": # Pendiente de mejorar con bloque try/except
 
 		empleado = models.Empleado.objects.get(pk=_id)
 
 		usuario = empleado.usuario
 
-		if usuario != None:
-			usuario.usuario.delete()
-
-		empleado.delete()
+		try:
 		
-		return redirect('lista_empleados')
+			if usuario != None:
+				usuario.delete()
+
+				empleado.delete()
+
+		except Exception as e:
+			
+			messages.error(request,"Excepción al eliminar empleado.")
+
+			logging.error(e)
+
+			return redirect(reverse('vError'))
+
+		messages.success(request, 'Registro eliminado con éxito')
+		
+		return redirect('lista_empleados', {'page':1})
 
 
 @login_required
@@ -230,186 +301,275 @@ def desactivar_empleado(request, _id):
 		empleado = models.Empleado.objects.get(pk=_id)
 		usuario = empleado.usuario
 		empleado.activo = False
-		usuario.activo = False
-		empleado.save()
-		usuario.save()
-		
-		return redirect('lista_empleados')
 
+		try:
+			
+			if usuario != None:
+			
+				usuario.is_active = False
+				usuario.save()
 
-@login_required
-@permission_required('core.asignar_usuario')
-def asignar_usuario(request, _id):
-		
-	if request.method == "GET":
-		empleado = get_object_or_404(models.Empleado, pk=_id)
-		form = forms.AsignaUsuarioForm()
-		empresa = getNombreEmpresa()
-		c = {'empresa':empresa, 'titulo':'Asignación de Usuario', 'seccion':'Usuarios y Emmpleados', 'empleado':empleado, 'form':form, 'ruta':'vAsignarUsuario', 'id':_id}
-		return render(request, 'asignar_usuario.html', c)
-
-	elif request.method == "POST":
-		form = forms.AsignaUsuarioForm(request.POST)
-		if form.is_valid():
-			empleado = get_object_or_404(models.Empleado, pk=_id)
-			usuario = get_object_or_404(models.Usuario, pk=request.POST['id_usuario'])
-			empleado.usuario = usuario
 			empleado.save()
-			return redirect('lista_empleados')
 
+		except Exception as e:
+			
+			messages.error(request,"Excepción al desactivar empleado.")
+
+			logging.error(e)
+
+			return redirect(reverse('vError'))
+		
+		messages.success(request,'El empleado ha sido desactivado con éxito')
+		
+		return redirect('lista_empleados', {'page':1})
 
 @login_required
-@permission_required('core.view_usuario')
-def lista_usuarios(request, page, todos=None):
+@permission_required('view.user')
+def lista_usuarios(request):
 
-	usuarios = None
-	limite = settings.LIMITE_FILAS
 	empresa = getNombreEmpresa()
 
-	if todos is None:
-		usuarios = models.Usuario.objects.filter(usuario__is_active = True)
-	else:
-		usuarios = models.Usuario.objects.all()
+	usuarios = User.objects.filter(is_superuser=False)
 
-	if usuarios != None and usuarios.count() > limite:
-		
-		paginador = Paginator(limite)
+	c = {'seccion':'Usuarios', 'titulo':'Lista de Usuarios', 'empresa':empresa, 'usuarios':'usuarios'}
 
-		usuarios = paginador.get_page(page)
-
-	return render(request, 'lista_usuarios.html', {'titulo':'Lista de Usuarios', 'seccion':'Usuarios', 'usuarios':usuarios, 'todos':todos})
+	return render(request, 'core/lista_usuarios.html', c)
 
 
 @login_required
-@permission_required('core.add_usuario')
+@permission_required('add.user')
 def nuevo_usuario(request):
 
 	if request.method == 'GET':
-
+		
 		empresa = getNombreEmpresa()
 		form = forms.UsuarioForm()
+		ruta = reverse('vNuevoUsuario')
+		c = {'seccion':'Usuarios', 'titulo':'Ingreso de Usuario', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
-		c = {'empresa':empresa, 'titulo':'Ingreso de Usuarios', 'seccion':'Usuarios', 'form':form, 'ruta':'vNuevoUsuario'}
-		
-		return render(request, 'forms/form_template.html', c)
+		messages.info(request, 'Los campos con * son obligatorios')
+
+		return render(request, 'core/forms/form_template.html', c)
 
 	elif request.method == 'POST':
-
+		
 		form = forms.UsuarioForm(request.POST)
 
 		if form.is_valid():
+			
+			datos = form.cleaned_data
 
-			user = form.save(commit=False)
-			user.username = user.email
-			user.save()
+			usuario = None
 
-			usuario = models.Usuario()
-			usuario.usuario = user
-			usuario.save()
+			try:
+				
+				usuario = User.objects.create_user(datos['correo'], datos['correo'], datos['contrasena'], first_name=datos['nombre'], last_name=datos['apellido'])
+			
+			except Exception as e:
+				
+				messages.error(request,"Excepción al crear usuario")
 
-			return redirect('lista_usuarios')
-		
+				logging.error(e)
+
+				return redirect(reverse('vError'))
+
+			return redirect('lista_usuarios', {'page':1})
+
 
 
 @login_required
-@permission_required('core.view_usuario')
+@permission_required('change_user')
 def editar_usuario(request, _id):
 
-	usuario = get_object_or_404(models.User, pk=_id)
+	usuario = get_object_or_404(User, pk=_id)
 
-	if request.method == "GET":
+	if request.method == 'GET':
 		
-		form = forms.UsuarioForm(usuario)
 		empresa = getNombreEmpresa()
 
-		c = {'empresa':getNombreEmpresa(), 'titulo':'Usuario', 'seccion':'Perfil de Usuario', 'form':form, 'ruta':'vEditarUsuario', 'id':_id}
+		form = forms.UserForm(usuario)
+
+		ruta = reverse('vEditarUsuario', {'_id':_id})
+
+		c = {'seccion':'Usuarios', 'titulo':'Editar Usuario', 'empresa':empresa, 'ruta':ruta, 'form':form}
+
+		messages.info(request, 'Los campos con * son obligatorios')
+
+		return render(request, 'core/forms/form_template.html', c)
+
+	elif request.method == 'POST':
 		
-		return render(request, 'forms/form_template.html', c)
-
-	elif request.method == "POST":
-
-		form = forms.UsuarioForm(request.POST, instance=usuario)
+		form = forms.UserForm(request.POST, instance=usuario)
 
 		if form.is_valid():
+			
+			try:
+				
+				form.save()
 
-			user = form.save(commit=False)
-			user.username = user.email
+			except Exception as e:
+				
+				messages.error(request,"Excepción al crear usuario")
 
-			user.save()
+				logging.error(e)
 
-			return redirect('index')
+				return redirect(reverse('vError'))
+
+			messages.success(request, 'El usuario se actualizó con éxito')
+
+			return redirect('lista_usuarios', {'page':1})
+
 
 
 @login_required
-@permission_required('core.password_usuario')
-def password_user_change(request, _id):
+@permission_required('core.change_empleado')
+def asignar_usuario(request, _id):
+
+	empleado = get_object_or_404(models.Empleado, pk=_id)
+		
+	if request.method == "GET":
+		
+		empresa = getNombreEmpresa()
+		form = forms.AsignaUsuarioForm(initial={'id_empleado':empleado.cedula})
+		ruta = reverse('vAsignarUsuario', {'_id':empleado.cedula})
+
+		c = {'empresa':empresa, 'titulo':'Asignación de Usuario', 'seccion':'Empleados', 'empleado':empleado, 'ruta':ruta, 'form':form}
+		
+		return render(request, 'core/forms/asignar_usuario.html', c)
+
+	elif request.method == "POST":
+
+		form = forms.AsignaUsuarioForm(request.POST)
+
+		if form.is_valid(): 
+
+			try:
+				
+				datos = form.cleaned_data
+
+				usuario = get_object_or_404(User, pk=datos['id_usuario'])
+				empleado.usuario = usuario
+				empleado.save()
+
+			except Exception as e:
+				
+				messages.error(request,"Excepción al asignar usuario al empleado. %s" % (empleado.cedula))
+
+				logging.error(e)
+
+				return redirect(reverse('vError'))
+
+			messages.success(request, 'El usuario se asignó con éxito')
+
+			return redirect('ver_empleado', {'_id':_id})
+		
+		
+
+
+@login_required
+def password_user_change(request):
+
+	user = request.user
 
 	if request.method == "GET":
 
 		empresa = getNombreEmpresa()
+
+		empleado = user.empleado
+
 		form = forms.PasswordChangeForm()
 
-		c = {'empresa':empresa, 'titulo':'Cambio de Contraseña', 'seccion':'Contraseña de Usuario', 'form':form, 'view':'vCambiarPassword', 'id':_id}
-		
-		return render(request, 'form_template.html', c)
+		ruta = reverse('vCambiarPassword', {'_id':_id})
 
-	elif request.method == "POST":
+		c = {'empresa':empresa, 'titulo':'Cambio de Contraseña', 'seccion':'Contraseña de Usuario', 'form':form, 'ruta':ruta, 'empleado':empleado}
+		
+		return render(request, 'core/forms/form_template.html', c)
+
+	elif request.method == "POST": 
 
 		form = forms.PasswordChangeForm(request.POST)
 
 		if form.is_valid():
-			
-			datos = request.POST
-			
-			if not (datos['password'] == datos['confirm_password']):
-				return render(request, 'error.html', {'titulo':'Contraseña no coincide', 'mensaje':'Las contraseñas no coinciden. Revise y vuelva a intentarlo.', 'view':'vListaUsuarios', 'seccion':'Perfil de usuario'})
-			else:
-				user.set_password(request.POST['password'])
+
+			try:
+				
+				datos = form.cleaned_data #request.POST
+
+				user.set_password(datos['password'])
+
 				user.save()
-				return redirect('bison_logout')
+
+			except Exception as e:
+				
+				messages.error(request,"Excepción al cambiar contaseña de usuario.")
+
+				logging.error(e)
+
+				return redirect(reverse('vError'))
 			
+			messages.success(request, 'La contraseña se cambió con éxito. Ingrese con su nueva contraseña.')
 
-@login_required
-@permission_required('core.delete_usuario')
-def eliminar_usuario(request, _id):
-	
-	if request.method == "POST":
+			return redirect('bison_logout')
 
-		usuario = get_object_or_404(models.Usuario, pk=_id)
-		
-		usuario.usuario.delete()
-		
-		return redirect('lista_empleados')
 
 
 @login_required
-@permission_required('core.change_usuario')
+@permission_required('change_user')
 def desactivar_usuario(request, _id):
-	
-	usuario = get_object_or_404(models.Usuario, pk=_id)
-	user = usuario.usuario
 
-	user.is_valid = False
-	usuario.activo = False
+	user = None
 
-	user.save()
-	usuario.save()
+	if request.method == "POST": 
 
-	return redirect('lista_usuarios')
+		user = get_object_or_404(User, pk=_id)
+
+			if not (user.empleado is None):
+
+				try:
+			
+					user.is_valid = False
+
+					user.save()
+
+				except Exception as e:
+					
+					messages.error(request,"Excepción al cambiar contaseña de usuario.")
+
+					logging.error(e)
+
+					return redirect(reverse('vError'))
+			
+				messages.success(request, 'Usuario desactivado con éxito')
+
+				return redirect('ver_empleado', {'_id':user.empleado.cedula})
+
+			else:
+
+				messages.warning(request, 'El usuario no ha sido asignado')
+
+				return redirect('index')
+
+		
+
 
 # ADMINISTRAR CATEGORIAS DE PRODUCTOS
 
 @login_required
-@permission_required('core.administrar_categoria')
-def lista_categorias(request):
+@permission_required('core.view_categoria')
+def lista_categorias(request, page):
 
 	empresa = getNombreEmpresa()
+	limite = settings.LIMITE_FILAS
+
 	categorias = models.Categoria.objects.all()
 
+	paginador = Paginator(categorias, limite)
+
+	categorias = paginador.get_page(page)
 
 	c = {'titulo':'Maestro de Categorias', 'seccion':'Categorias', 'empresa':empresa, 'categorias':categorias}
 
-	return render(request, 'lista_categorias.html', c)
+	return render(request, 'core/lista_categorias.html', c)
 
 
 @login_required
@@ -422,18 +582,33 @@ def nueva_categoria(request):
 
 		empresa = getNombreEmpresa()
 		formset = CategoriaFormSet()
+		ruta = reverse('vNuavaCategoria')
 
-		c = {'titulo':'Ingreso de Categorias', 'seccion':'Categorias', 'empresa':empresa, 'formset':formset, 'ruta':'vNuavaCategoria'}
+		c = {'titulo':'Ingreso de Categorias', 'seccion':'Categorias', 'empresa':empresa, 'formset':formset, 'ruta':ruta}
+
+		messages.info(request, 'Los campos con * son obligatorios')
 		
-		return render(request, 'formset_template.html', c)
+		return render(request, 'core/forms/formset_template.html', c)
 
-	elif request.method == "POST":
+	elif request.method == "POST": # Pendiente de mejorar con bloque try/except
 
 		formset = CategoriaFormSet(request.POST)
 
 		if formset.is_valid():
+
+			try:
+				
+				formset.save()
+
+			except Exception as e:
+				
+				messages.error(request,"Excepción al ingresar categorias")
+
+				logging.error(e)
+
+				return redirect(reverse('vError'))
 			
-			formset.save()
+			messages.success(request, 'Los datos se ingresaron con éxito')
 
 			return redirect('lista_categorias', {'page':1})
 		
@@ -441,31 +616,43 @@ def nueva_categoria(request):
 
 @login_required
 @permission_required('core.change_categoria')
-def editar_categorias(request):
+def editar_categoria(request, _id):
 
-	categorias = models.Categoria.objects.all()
-	extra_fields = 4 if categorias.count() > 0 else 3
-
-	CategoriaFormSet = modelformset_factory(models.Categoria, form=forms.CategoriaForm, extra=extra_fields)
+	categoria = get_object_or_404(models.Categoria, pk=_id)
 
 	if request.method == "GET":
 
-		formset = CategoriaFormSet(initial=categorias)
+		form = forms.EditCategoriaForm(categoria)
 		empresa = getNombreEmpresa()
+		ruta = reverse('vEditarCategorias')
 
-		c = {'titulo':'Edición de Categorías', 'seccion':'Categorías', 'formset':formset, 'empresa':empresa, 'ruta':'vEditarCategorias'}
+		c = {'titulo':'Edición de Categorías', 'seccion':'Categorías', 'form':form, 'empresa':empresa, 'ruta':ruta}
+
+		messages.info(request, 'Los campos con * son obligatorios')
 		
-		return render(request, 'formset_template.html', c)
+		return render(request, 'core/forms/form_template.html', c)
 
-	elif request.method == "POST":
+	elif request.method == "POST": # Pendiente de mejorar con bloque try/except
 
-		formset = CategoriaFormset(request.POST, initial=categorias)
+		form = forms.EditCategoriaForm(request.POST, instance=categoria)
 
-		if formset.is_valid():
+		if form.is_valid():
 
-			formset.save()
+			try:
+				
+				form.save()
 
-			return redirect('lista_categorias')
+			except Exception as e:
+				
+				messages.error(request,"Excepción al actualizar categoria")
+
+				logging.error(e)
+
+				return redirect(reverse('vError'))
+			
+			messages.success(request, 'El registro se actualizó con éxito')
+
+			return redirect('lista_categorias', {'page':1})
 		
 
 
@@ -473,30 +660,35 @@ def editar_categorias(request):
 @permission_required('core.delete_categoria')
 def eliminar_categoria(request, _id):
 
-	if request.method == "POST":
+	if request.method == "POST": # Pendiente de mejorar con bloque try/except
 
 		categoria = get_object_or_404(models.Categoria, pk=_id)
 		categoria.delete()
 
-		return redirect('lista_categorias')
+		return redirect('lista_categorias', {'page':1})
 
 
 # ADMINISTRAR UNIDADES DE MEDIDA
 
 @login_required
-@permission_required('core.administrar_unidad')
-def lista_medidas(request):
+@permission_required('core.view_unidad')
+def lista_medidas(request, page):
 
 	empresa = getNombreEmpresa()
+	limite = settings.LIMITE_FILAS
+
 	unidades = get_list_or_404(models.Unidad)
+	paginador = Paginator(unidades, limite)
+
+	unidades = paginador.get_page(page)
 
 	c = {'titulo':'Maestro de Unidad de Medida', 'seccion':'Unidades de Medida', 'empresa':empresa, 'unidades':unidades}
 	
-	return render(request, 'lista_unidades.html', c)
+	return render(request, 'core/lista_unidades.html', c)
 
 
 @login_required
-@permission_required(['core.administrar_unidad'])
+@permission_required(['core.add_unidad'])
 def nueva_medida(request):
 
 	UnidadFormSet = modelformset_factory(models.Unidad, form=forms.UnidadForm, extra=3)
@@ -507,60 +699,90 @@ def nueva_medida(request):
 		formset = UnidadFormSet()
 
 		c = {'titulo':'Ingreso de Unidad de Medida', 'seccion':'Unidades de Medida', 'empresa':empresa, 'formset':formset}
-		
-		return render(request, 'formset_template.html', c)
 
-	elif request.method == "POST":
+		messages.info(request, 'Los campos con * son obligatorios')
+		
+		return render(request, 'core/forms/formset_template.html', c)
+
+	elif request.method == "POST": # Pendiente de mejorar con bloque try/except
 
 		formset = UnidadFormSet(request.POST)
 
 		if formset.is_valid():
 
-			unidades = formset.save()
+			try:
+				
+				formset.save()
 
-			return redirect('lista_medidas')
+			except Exception as e:
+				
+				messages.error(request,"Excepción al ingresar categorias")
+
+				logging.error(e)
+
+				return redirect(reverse('vError'))
+			
+			messages.success(request, 'Los datos se ingresaron con éxito')
+
+			return redirect('lista_medidas', {'page':1})
+
+			
 		
 
 @login_required
-@permission_required('core.administrar_unidad')
+@permission_required('core.change_unidad')
 def editar_medida(request, _id):
 
-	unidades = models.Unidad.objects.all()
-	extra_fields = 4 if unidades.count() > 0 else 3
-
-	UnidadFormSet = modelformset_factory(models.Unidad, form=forms.UnidadForm, extra=extra_fields)
+	unidad = get_object_or_404(models.Unidad, pk=_id)
 
 	if request.method == "GET":
 
-		formset = UnidadFormSet(initial=unidades)
+		form = forms.EditUnidadForm(unidad)
 		empresa = getNombreEmpresa()
+		ruta = reverse('vEditarMedida')
 
-		c = {'titulo':'Edición de Unidad de Medida', 'seccion':'Unidades de Medida', 'formset':formset, 'empresa':empresa, 'ruta':'vEditarMedida'}
+		c = {'titulo':'Edición de Unidad de Medida', 'seccion':'Unidades de Medida', 'form':form, 'empresa':empresa, 'ruta':ruta}
+
+		messages.info(request, 'Los campos con * son obligatorios')
 		
-		return render(request, 'formset_template.html', c)
+		return render(request, 'core/forms/form_template.html', c)
 
-	elif request.method == "POST":
+	elif request.method == "POST": # Pendiente de mejorar con bloque try/except
 
-		formset = UnidadFormSet(request.POST, initial=unidades)
+		form = forms.EditUnidadForm(request.POST, instance=unidad)
 
-		if formset.is_valid():
+		if form.is_valid():
 
-			formset.save()
+			try:
+				
+				form.save()
 
-			return redirect('lista_medidas')
+			except Exception as e:
+				
+				messages.error(request,"Excepción al actualizar categoria")
+
+				logging.error(e)
+
+				return redirect(reverse('vError'))
+			
+			messages.success(request, 'El registro se actualizó con éxito')
+
+			return redirect('lista_medidas', {'page':1})
+
+
 		
 
 @login_required
-@permission_required('core.administrar_unidad')
+@permission_required('core.delete_unidad')
 def eliminar_medida(request, _id):
 	
-	if request.method == "POST":
+	if request.method == "POST": # Pendiente de mejorar con bloque try/except
 
 		unidad = get_object_or_404(models.Unidad, pk=_id)
 
 		unidad.delete()
 
-		return redirect('lista_medidas')
+		return redirect('lista_medidas', {'page':1})
 
 
 

@@ -144,6 +144,8 @@ MONTO_IVA = 0.15
 
 LIMITE_FILAS = 20
 
+LIMITE_PAGINAS = 5
+
 LOGOUT_REDIRECT_URL = '/core/login/'
 
 LOGIN_URL = '/core/login/'

@@ -8,7 +8,16 @@ class CuentaForm(forms.ModelForm):
 
 	class Meta:
 		model = models.Cuenta
-		fields = '__all__'
+		exclude = ['cerrada']
+
+
+class EditCuentaForm(forms.ModelForm):
+	"""Formulario para  CuentaContable"""
+
+	class Meta:
+		model = models.Cuenta
+		exclude = ['cerrada']
+		widgets = {'cuenta':forms.TextInput(attrs={'readonly':True})}
 
 
 class AsientoForm(forms.ModelForm):

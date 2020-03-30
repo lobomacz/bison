@@ -1,10 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404, get_list_or_404
 from django.conf import settings
+from django.urls import reverse
 from django.forms import formset_factory, modelformset_factory, inlineformset_factory
+from django.contrib import messages
 from django.contrib.auth import login_required, permission_required
+from django.core.paginator import Paginator
 from bison.core.models import Empleado
 from . import models, forms
-import datetime, calendar
+import datetime, calendar, logging
 
 # Create your views here.
 
@@ -17,16 +20,42 @@ def getNombreEmpresa():
 def index(request):
 	empresa = getNombreEmpresa()
 	c = {'titulo':'Panel de Contabilidad', 'seccion':'Contabilidad', 'empresa':empresa}
-	return render(request, 'indice.html', c)
+	return render(request, 'contabilidad/indice.html', c)
+
 
 #Vista que despliega el catálogo de cuentas contables
 @login_required
-@permission_required(['contabilidad.view_cuenta', 'contabilidad.change_cuenta'])
-def lista_cuentas(request):
+@permission_required('contabilidad.view_cuenta')
+def lista_cuentas(request, page):
+
 	empresa = getNombreEmpresa()
 	cuentas = models.Cuenta.objects.all()
+	limite = settings.LIMITE_FILAS
+
+	if cuentas.count() > 0:
+		paginador = Paginator(cuentas, limite)
+		cuentas = paginador.get_page(page)
+
 	c = {'titulo':'Catálogo de Cuentas', 'seccion':'Contabilidad', 'empresa':empresa, 'cuentas':cuentas}
-	return render(request, 'catalogo.html' c)
+
+	return render(request, 'contabilidad/catalogo.html' c)
+
+
+
+@login_required
+@permission_required('contabilidad.view_cuenta')
+def ver_cuenta(request, _id):
+
+	cuenta = get_object_or_404(models.Cuenta, pk=_id)
+	empresa = getNombreEmpresa()
+	ruta_delete = reverse('vEliminarCuenta',{'_id':_id})
+	ruta_edit = reverse('vEditarCuenta', {'_id':_id})
+	ruta_cerrar = reverse('vCerrarCuenta', {'_id':_id})
+
+	c = {'seccion':'Contabilidad', 'empresa':empresa, 'cuenta':cuenta, 'titulo':'Cuenta contable', 'ruta_delete':ruta_delete, 'ruta_edit':ruta_edit, 'ruta_cerrar':ruta_cerrar}
+
+	return render(request, 'contabilidad/ver_cuenta.html', c)
+
 
 #Vista para ingreso de nueva cuenta contable
 @login_required
@@ -37,46 +66,81 @@ def nueva_cuenta(request):
 
 		empresa = getNombreEmpresa()
 		form = forms.CuentaForm()
-		c = {'titulo':'Ingreso de Cuentas Contables', 'seccion':'Contabilidad', 'empresa':empresa, 'form':form, 'view':'vNuevaCuenta'}
-		return render(request, 'cuenta_form.html', c)
+		ruta = reverse('vNuevaCuenta')
+		c = {'titulo':'Ingreso de Cuentas Contables', 'seccion':'Contabilidad', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		
+		return render(request, 'core/forms/form_template.html', c)
 	
 	elif request.method == "POST":
 		
-		formCuenta = forms.CuentaForm(request.POST)
+		form = forms.CuentaForm(request.POST)
 
-		if formCuenta.is_valid():
-			formCuenta.save()
-			return redirect('lista_cuentas')
+		if form.is_valid():
+
+			cuenta = None
+
+			try:
+				
+				cuenta = form.save(commit=False)
+				cuenta.save()
+
+			except Exception as e:
+				
+				messages.error(request,"Excepción al registrar cuenta contable.")
+
+				logging.error(e)
+
+				return redirect(reverse('vError'))
+
+			messages.success(request, 'La cuenta se registró con éxito')
+
+			return redirect('ver_cuenta', {'_id':cuenta.id})
 		
-
 
 #Vista de edición de cuentas contables
 @login_required
-@permission_required(['contabilidad.view_cuenta', 'contabilidad.change_cuenta'])
+@permission_required('contabilidad.change_cuenta')
 def editar_cuenta(request, _id):
 
-	if request.method == "GET":
+	cuenta = get_object_or_404(models.Cuenta, pk=_id)
 
-		cuenta = get_object_or_404(models.Cuenta, pk=_id)
+	if request.method == "GET":
+		
 		empresa = getNombreEmpresa()
-		form = forms.CuentaForm(cuenta)
-		c = {'titulo':'Edición de Cuenta Contable', 'seccion':'Contabilidad', 'form':form, 'id':_id, 'view':'vEditarCuenta', 'empresa':empresa}
-		return render(request, 'cuenta_form.html', c)
+		form = forms.EditCuentaForm(cuenta)
+		ruta = reverse('vEditarCuenta', {'_id':_id})
+
+		c = {'titulo':'Edición de Cuenta Contable', 'seccion':'Contabilidad', 'form':form, 'ruta':ruta, 'empresa':empresa}
+		
+		return render(request, 'core/forms/form_template.html', c)
 
 	elif request.method == "POST":
 		
-		cuenta = get_object_or_404(models.Cuenta, pk=_id)
-		cuentaForm = forms.CuentaForm(request.POST, instance=cuenta)
+		form = forms.EditCuentaForm(request.POST, instance=cuenta)
 
-		if cuentaForm.is_valid():
-			cuentaForm.save()
-			return redirect('lista_cuentas')
+		if form.is_valid():
+
+			try:
+				
+				form.save()
+
+			except Exception as e:
+				
+				messages.error(request,"Excepción al editar cuenta contable.")
+
+				logging.error(e)
+
+				return redirect(reverse('vError'))
+
+			messages.success(request, 'El registro se actualizó con éxito')
+
+			return redirect('vVerCuenta', {'_id':_id})
 		
 
 
 #Vista para cerrar una cuenta
 @login_required
-@permission_required(['contabilidad.change_cuenta', 'contabilidad.cerrar_cuenta'])
+@permission_required('contabilidad.cerrar_cuenta')
 def cerrar_cuenta(request, _id):
 
 	if request.method == "POST":
@@ -85,7 +149,7 @@ def cerrar_cuenta(request, _id):
 		cuenta.cerrada = True
 		cuenta.save()
 
-		return redirect('lista_cuentas')
+		return redirect('ver_cuenta', {'_id':_id})
 
 
 @login_required
@@ -97,27 +161,32 @@ def eliminar_cuenta(request, _id):
 
 		cuenta.delete()
 
-		return redirect('lista_cuentas')
+		return redirect('lista_cuentas', {'page':1})
 
 
 @login_required
 @permission_required('contabilidad.view_asiento')
-def indice_asientos(request, _id):
+def lista_asientos(request, _id=None):
 
-	periodo = get_object_or_404(models.Periodo, pk=_id)
+	periodo = None
+
+	if _id is None:
+		periodo = models.Periodo.objects.filter(activo=True)
+	else:
+		periodo = get_object_or_404(models.Periodo, pk=_id)
 
 	asientos = models.Asiento.objects.filter(fecha__gte=periodo.fecha_inicio, fecha__lte=periodo.fecha_final)
 
 	empresa = getNombreEmpresa()
 
-	c = {'titulo':'Asientos Contables', 'seccion':'Asientos Contables', 'empresa':empresa, 'asientos':asientos, 'fecha_inicio':inicio, 'fecha_final':final}
+	c = {'titulo':'Asientos Contables', 'seccion':'Asientos Contables', 'empresa':empresa, 'asientos':asientos, 'fecha_inicio':periodo.fecha_inicio, 'fecha_final':periodo.fecha_final}
 
-	return render(request, 'indice_asientos.html', c)
+	return render(request, 'contabilidad/lista_asientos.html', c)
 
 
 @login_required
 @permission_required('contabilidad.view_asiento')
-def indice_asientos_fecha(request):
+def lista_asientos_fecha(request):
 
 	empresa = getNombreEmpresa()
 
@@ -133,11 +202,13 @@ def indice_asientos_fecha(request):
 		
 			c = {'titulo':'Asientos Por Rango De Fecha', 'seccion':'Asientos Contables', 'empresa':empresa, 'asientos':asientos, 'fecha_inicio':inicio, 'fecha_final':final}
 
-			return render(request, 'indice_asientos.html', c)
+			return render(request, 'contabilidad/lista_asientos.html', c)
 
 		else:
 
-			return render(request, 'error.html', {'titulo':'Error', 'seccion':'Contabilidad', 'mensaje':'No se seleccionó un rango de fecha válido.', 'view':'vIndiceAsientos'})
+			ruta = reverse('vListaAsientos', {'page':1})
+
+			return render(request, 'core/error.html', {'titulo':'Error', 'seccion':'Contabilidad', 'mensaje':'No se seleccionó un rango de fecha válido.', 'ruta':ruta)
 
 
 @login_required

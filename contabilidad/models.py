@@ -6,6 +6,12 @@ class Cuenta(models.Model):
 	"""Modelo de datos para Cuentas"""
 	cuenta = models.CharField(max_length=25, primary_key=True)
 	descripcion = models.CharField(max_length=200)
+	tipo = models.CharField(max_length=3, choices=[
+		('Act', 'Activo'),('Pas', 'Pasivo'),('Cap', 'Capital'),
+		('Ing', 'Ingresos'),('Gas','Gastos'),('CdV', 'Costos de Venta'),
+		('CdP','Costos de Producción'),('CoD','Cuentas de Orden Deudoras'),
+		('CoA','Cuentas de Orden Acreedoras')])
+	tipo_movimiento = models.CharField(max_length=2,choices=[('Cr', 'Crédito'),('Db', 'Débito')])
 	cuenta_padre = models.ForeignKey('self', null=True, on_delete=models.CASCADE)
 	nivel = models.CharField(choices=[('C', 'Cuenta'), ('S', 'Subcuenta'), ('D', 'Detalle')])
 	resumen = models.BooleanField()
@@ -26,7 +32,7 @@ class Cuenta(models.Model):
 		return self.cuenta
 
 	def get_absolute_url(self):
-		return reverse('vDetalleCuenta', {'_id':self.cuenta})
+		return reverse('vVerCuenta', {'_id':self.cuenta})
 
 class Asiento(models.Model):
 	"""Modelo de datos para Asientos"""
@@ -37,7 +43,7 @@ class Asiento(models.Model):
 	fecha_contabilizado = models.DateTimeField(null=True)
 	anulado = models.BooleanField()
 	fecha_anulado = models.DateTimeField(null=True)
-	observaciones = models.CharField(max_length=400)
+	observaciones = models.CharField(max_length=600)
 
 	class Meta:
 		ordering = ['id', 'fecha']
