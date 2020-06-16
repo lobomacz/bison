@@ -59,6 +59,7 @@ class Unidad(models.Model):
 
 	nombre = models.CharField(max_length=25)
 	simbolo = models.CharField(max_length=8)
+	unidad_base = models.BooleanField()
 
 	class Meta:
 		ordering = ['nombre']
@@ -71,6 +72,22 @@ class Unidad(models.Model):
 	def __str__(self):
 
 		return self.nombre
+
+
+
+class Conversion(object):
+	"""docstring for Conversion"""
+	
+	origen = models.ForeignKey(Unidad)
+	destino = models.ForeignKey(Unidad)
+	relacion_directa = models.DecimalField()
+	relacion_inversa = models.DecimalField()
+
+	class Meta:
+		ordering = ['origen']
+		verbose_name = 'Conversión de Unidades'
+		verbose_name_plural = 'Conversiones de Unidades'
+		
 
 
 

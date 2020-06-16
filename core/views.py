@@ -559,13 +559,16 @@ def desactivar_usuario(request, _id):
 def lista_categorias(request, page):
 
 	empresa = getNombreEmpresa()
+
 	limite = settings.LIMITE_FILAS
 
 	categorias = models.Categoria.objects.all()
 
-	paginador = Paginator(categorias, limite)
+	if categorias.count() > limite:
 
-	categorias = paginador.get_page(page)
+		paginador = Paginator(categorias, limite)
+
+		categorias = paginador.get_page(page)
 
 	c = {'titulo':'Maestro de Categorias', 'seccion':'Categorias', 'empresa':empresa, 'categorias':categorias}
 

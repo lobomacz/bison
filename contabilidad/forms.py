@@ -9,6 +9,7 @@ class CuentaForm(forms.ModelForm):
 	class Meta:
 		model = models.Cuenta
 		exclude = ['cerrada']
+		widgets = {'cuenta_padre':forms.TextInput}
 
 
 class EditCuentaForm(forms.ModelForm):
@@ -17,7 +18,10 @@ class EditCuentaForm(forms.ModelForm):
 	class Meta:
 		model = models.Cuenta
 		exclude = ['cerrada']
-		widgets = {'cuenta':forms.TextInput(attrs={'readonly':True})}
+		widgets = {
+		'cuenta':forms.TextInput(attrs={'readonly':True}),
+		'cuenta_padre':forms.TextInput,
+		}
 
 
 class AsientoForm(forms.ModelForm):

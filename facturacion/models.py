@@ -13,14 +13,14 @@ class Factura(models.Model):
 	no_documento = models.CharField(max_length=10, null=True)
 	cliente = models.ForeignKey('Cliente', on_delete=models.SET_NULL, null=True)
 	vendedor = models.ForeignKey('Vendedor', on_delete=models.SET_NULL, null=True)
-	asiento = models.ForeignKey(Asiento, on_delete=models.SET_NULL, null=True)
-	salida = models.ManyToManyField(Salida)
+	asiento = models.ForeignKey(Asiento, on_delete=models.PROTECT, null=True)
+	salida = models.ForeignKey(Salida, on_delete=models.PROTECT, null=True)
 	tipo = models.CharField('Tipo de Factura', choices=[('cr', 'Credito'), ('ct', 'Contado'), ('pf', 'Proforma')], max_length=2)
 	tipo_pago = models.CharField('Forma de Pago', choices=[('ef', 'Efectivo'), ('tr', 'Tarjeta'), ('ck', 'Cheque')])
 	cancelada = models.BooleanField()
-	entregado = models.BooleanField()
+	entregada = models.BooleanField()
 	anulada = models.BooleanField()
-	impresa = models.BooleanField()
+	impresiones = models.IntegerField(default=0)
 	descuento = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 	subtotal = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 	iva = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
@@ -30,7 +30,7 @@ class Factura(models.Model):
 		ordering = ['no_documento', 'fecha']
 		permissions = [
 			('anular_factura', 'Anular facturas'),
-			('imprimir_factura', 'Imprimir facturas'),
+			('cancelar_factura', 'Cancelar facturas'),
 		]
 		indexes = [
 			models.Index(fields=['no_documento', 'tipo', 'vendedor'])
@@ -60,13 +60,14 @@ class Proforma(models.Model):
 	fecha = models.DateField()
 	cliente = models.ForeignKey('Cliente', on_delete=models.SET_NULL, null=True)
 	vendedor = models.ForeignKey('Vendedor', on_delete=models.SET_NULL, null=True)
-	impresa = models.BooleanField(default=False)
+	valida = models.BooleanField(default=True)
 	anulado = models.BooleanField(default=False)
 	anulado_por = models.ForeignKey(Empleado, on_delete=models.PROTECT, null=True)
 	descuento = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 	subtotal = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 	iva = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 	total = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+
 
 	class Meta:
 		ordering = ['fecha', 'cliente']

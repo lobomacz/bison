@@ -11,7 +11,7 @@ class Cuenta(models.Model):
 		('Ing', 'Ingresos'),('Gas','Gastos'),('CdV', 'Costos de Venta'),
 		('CdP','Costos de Producción'),('CoD','Cuentas de Orden Deudoras'),
 		('CoA','Cuentas de Orden Acreedoras')])
-	tipo_movimiento = models.CharField(max_length=2,choices=[('Cr', 'Crédito'),('Db', 'Débito')])
+	tipo_movimiento = models.CharField(max_length=2,choices=[('cr', 'Crédito'),('db', 'Débito')])
 	cuenta_padre = models.ForeignKey('self', null=True, on_delete=models.CASCADE)
 	nivel = models.CharField(choices=[('C', 'Cuenta'), ('S', 'Subcuenta'), ('D', 'Detalle')])
 	resumen = models.BooleanField()
@@ -39,9 +39,9 @@ class Asiento(models.Model):
 	fecha = models.DateField()
 	descripcion = models.CharField(max_length=200)
 	referencia = models.CharField(max_length=25)
-	contabilizado = models.BooleanField()
+	contabilizado = models.BooleanField(default=False)
 	fecha_contabilizado = models.DateTimeField(null=True)
-	anulado = models.BooleanField()
+	anulado = models.BooleanField(default=False)
 	fecha_anulado = models.DateTimeField(null=True)
 	observaciones = models.CharField(max_length=600)
 
@@ -80,7 +80,7 @@ class DetalleAsiento(models.Model):
 
 class Ejercicio(models.Model):
 	""" Modelo de datos para Ejercicios Contables """
-	ejercicio = models.CharField(max_length=4, min_length=4, primary_key=True)
+	ejercicio = models.CharField(max_length=4, min_length=4)
 	descripcion = models.CharField(max_length=200)
 	activo = models.BooleanField(default=False)
 
@@ -88,6 +88,7 @@ class Ejercicio(models.Model):
 		ordering = ['ejercicio']
 		verbose_name = 'Ejercicio Contable'
 		verbose_name_plural = 'Ejercicios Contables'
+
 
 	def get_absolute_url(self):
 		return reverse('vDetalleEjercicio', {'_id':self.ejercicio})
@@ -113,6 +114,7 @@ class Periodo(models.Model):
 		permissions = [
 			('activar_periodo', 'Activar períodos contables'),
 			('cerrar_periodo', 'Cerrar períodos contables'),
+			('reporte_periodo', 'Ver reportes del periodo'),
 		]
 
 	def get_absolute_url(self):

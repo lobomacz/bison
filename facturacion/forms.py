@@ -6,18 +6,20 @@ class fFactura(forms.ModelForm):
 	"""docstring for FacturaForm"""
 	class Meta:
 		model = models.Factura 
-		exclude = ['asiento', 'salida', 'anulada', 'impresa', 'subtotal', 'iva', 'total', 'vendedor', 'cancelada', 'entregado']
+		exclude = ['asiento', 'salida', 'anulada', 'impresiones', 'subtotal', 'iva', 'total', 'vendedor', 'cancelada', 'entregado']
 		widgets = {
-			'id':forms.HiddenInput
+			'id':forms.HiddenInput,
+			'fecha':forms.TextInput(attrs={'readonly':True})
 		}
 
 class fFacturaEditar(forms.ModelForm):
 	"""docstring para fFacturaEditar"""
 	class Meta:
 		model = models.Factura
-		exclude = ['impresa', 'subtotal', 'iva', 'total', 'vendedor', 'cancelada', 'anulada', 'entregado']
+		exclude = ['impresiones', 'subtotal', 'iva', 'total', 'vendedor', 'cancelada', 'anulada', 'entregado']
 		widgets = {
-			'id':forms.HiddenInput
+			'id':forms.HiddenInput,
+			'fecha':forms.TextInput(attrs={'readonly':True})
 		}
 
 class fDetalleFactura(forms.ModelForm):
@@ -34,9 +36,10 @@ class fProforma(forms.ModelForm):
 	"""docstring for ProformaForm"""
 	class Meta:
 		model = models.Proforma 
-		exclude = ['vendedor', 'impresa', 'anulado', 'anulado_por', 'subtotal', 'iva', 'total']
+		exclude = ['vendedor', 'anulado', 'anulado_por', 'subtotal', 'iva', 'total']
 		widgets = {
-			'id':forms.HiddenInput
+			'id':forms.HiddenInput,
+			'fecha':forms.TextInput(attrs={'readonly':True})
 		}
 
 class fProformaEditar(forms.ModelForm):
