@@ -136,11 +136,11 @@ def ver_proforma(request, _id):
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	ruta_edit = reverse('vEditarProforma', {'_id':_id})
+	ruta_edit = reverse('vEditarProforma', kwargs={'_id':_id})
 
-	ruta_anular = reverse('vAnularProforma', {'_id':_id})
+	ruta_anular = reverse('vAnularProforma', kwargs={'_id':_id})
 
-	ruta_reemitir = reverse('vReemitirProforma', {'_id':_id})
+	ruta_reemitir = reverse('vReemitirProforma', kwargs={'_id':_id})
 
 	c = {'titulo':'Detalle de Proforma', 'seccion':'Facturación', 'proforma':proforma, 'ruta_edit':ruta_edit, 'ruta_anular':ruta_anular, 'ruta_reemitir':ruta_reemitir}
 
@@ -164,7 +164,7 @@ def detalle_proforma(request, _id):
 
 		formset = DetalleFormset(instance=proforma)
 
-		ruta = reverse('vDetalleProforma', {'_id':_id})
+		ruta = reverse('vDetalleProforma', kwargs={'_id':_id})
 
 		c = {'titulo':'Detalle de Proforma', 'seccion':'Facturación', 'empresa':empresa, 'proforma':proforma, 'formset':formset, 'ruta':ruta}
 
@@ -294,7 +294,7 @@ def editar_proforma(request, _id):
 
 		form = forms.fProforma(proforma)
 
-		ruta = reverse('vEditarProforma', {'_id':_id})
+		ruta = reverse('vEditarProforma', kwargs={'_id':_id})
 
 		c = {'titulo':'Editar Proforma', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
@@ -323,19 +323,21 @@ def editar_proforma(request, _id):
 @permission_required(['facturacion.add_proforma', 'facturacion.change_proforma'])
 def reemitir_proforma(request, _id):
 
-	proforma = get_object_or_404(models.Proforma, pk=_id)
+	if request.method == 'POST':
 
-	hoy = datetime.datetime.today()
+		proforma = get_object_or_404(models.Proforma, pk=_id)
 
-	proforma.fecha = hoy
+		hoy = datetime.datetime.today()
 
-	proforma.pk = None
+		proforma.fecha = hoy
 
-	proforma = proforma.save()
+		proforma.pk = None
 
-	messages.success(request, 'La proforma se ha reemitido con éxito.')
+		proforma = proforma.save()
 
-	return redirect('ver_proforma', {'_id':proforma.pk})
+		messages.success(request, 'La proforma se ha reemitido con éxito.')
+
+		return redirect('ver_proforma', {'_id':proforma.pk})
 
 
 
@@ -370,13 +372,13 @@ def ver_factura(request, _id):
 
 	params = {'_id':_id}
 
-	ruta_edit = reverse('vEditarFactura', params)
+	ruta_edit = reverse('vEditarFactura', kwargs=params)
 
-	ruta_cancelar = reverse('vCancelarFactura', params)
+	ruta_cancelar = reverse('vCancelarFactura', kwargs=params)
 
-	ruta_anular = reverse('vAnularFactura', params)
+	ruta_anular = reverse('vAnularFactura', kwargs=params)
 
-	ruta_entregar = reverse('vEntregarFactura', params)
+	ruta_entregar = reverse('vEntregarFactura',kwargs=params)
 
 	c = {'titulo':'Factura', 'seccion':'Facturación', 'factura':factura, 'empresa':empresa, 'ruta_edit':ruta_edit, 'ruta_cancelar':ruta_cancelar, 'ruta_entregar':ruta_entregar, 'ruta_anular':ruta_anular}
 
@@ -401,7 +403,7 @@ def detalle_factura(request, _id):
 
 		empresa = settings.NOMBRE_EMPRESA
 
-		ruta = reverse('vDetalleFactura', {'_id':_id})
+		ruta = reverse('vDetalleFactura', kwargs={'_id':_id})
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -514,7 +516,7 @@ def editar_factura(request, _id):
 
 		empresa = settings.NOMBRE_EMPRESA
 
-		ruta = reverse('vEditarFactura', {'_id':_id})
+		ruta = reverse('vEditarFactura', kwargs={'_id':_id})
 
 		c = {'titulo':'Edición de Factura', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
@@ -537,7 +539,7 @@ def editar_factura(request, _id):
 			return redirect('detalle_factura', {'_id':_id})
 
 
-
+'''
 @login_required
 @permission_required('facturacion.cancelar_factura')
 def detalle_asiento_factura(request, _id, _ida):
@@ -558,27 +560,63 @@ def asiento_factura(request, _id):
 		pass
 	elif request.method == 'POST':
 		pass
-
+'''
 
 
 
 @login_required
-@permission_required('facturacion.imprimir_factura')
+@permission_required('facturacion.cancelar_factura')
 def cancelar_factura(request, _id):
 
 	factura = get_object_or_404(models.Factura, pk=_id)
 
-	factura.cancelada = True
+	if factura.asiento == None || factura.asiento.detalleasiento_set.all().count() == 0:
 
-	factura.save()
+		asiento = None
 
-	messages.success(request, "La factura se registró como cancelada.")
+		if factura.asiento == None:
 
-	return redirect('asiento_factura', {'_id':_id})
+			fecha = datetime.date.today()
+
+			descripcion = "Venta de producto al contado" if factura.tipo == 'ct' else "Venta de producto al crédito"
+
+			asiento = Asiento()
+
+			asiento.fecha = fecha 
+
+			asiento.descripcion = descripcion
+
+			asiento.referencia = "Factura No.{}".format(factura.id)
+
+			asiento.observaciones = "Documento No. {}".format(factura.no_documento)
+
+			asiento.save()
+
+			factura.asiento = asiento
+
+			factura.save()
+
+		else:
+
+			asiento = factura.asiento
+
+		messages.info(request, "Por favor ingrese el detalle del asiento contable.")
+
+		ruta = reverse('contabilidad:vDetalleAsiento', kwargs={'_id':asiento.id, 'tipo':2})
+
+		return redirect(ruta) #redirect(reverse('vDetalleAsiento', kwargs={'_id':asiento.id, 'tipo':2}))
+
+	else:
+
+		factura.cancelada = True
+
+		factura.save()
+
+		messages.success(request, "La factura se registró como cancelada.")
+
+		return redirect('ver_factura', {'_id':_id})
 
 
-
-		
 
 
 @login_required

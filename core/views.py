@@ -120,7 +120,7 @@ def ver_empleado(request, _id):
 @permission_required('core.add_empleado')
 def nuevo_empleado(request):
 
-	ruta = 'vNuevoEmpleado'
+	ruta = reverse('vNuevoEmpleado')
 	
 	if request.method == "GET":
 		
@@ -224,7 +224,7 @@ def editar_empleado(request, _id):
 		
 		empleado = get_object_or_404(models.Empleado, pk=_id)
 
-		ruta = reverse('vEditarEmpleado', {'_id':empleado.cedula})
+		ruta = reverse('vEditarEmpleado', kwargs={'_id':empleado.cedula})
 
 		form = forms.EditEmpleadoForm(empleado)
 
@@ -343,8 +343,11 @@ def nuevo_usuario(request):
 	if request.method == 'GET':
 		
 		empresa = getNombreEmpresa()
+
 		form = forms.UsuarioForm()
+
 		ruta = reverse('vNuevoUsuario')
+
 		c = {'seccion':'Usuarios', 'titulo':'Ingreso de Usuario', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, 'Los campos con * son obligatorios')
@@ -389,7 +392,7 @@ def editar_usuario(request, _id):
 
 		form = forms.UserForm(usuario)
 
-		ruta = reverse('vEditarUsuario', {'_id':_id})
+		ruta = reverse('vEditarUsuario', kwargs={'_id':_id})
 
 		c = {'seccion':'Usuarios', 'titulo':'Editar Usuario', 'empresa':empresa, 'ruta':ruta, 'form':form}
 
@@ -430,8 +433,10 @@ def asignar_usuario(request, _id):
 	if request.method == "GET":
 		
 		empresa = getNombreEmpresa()
+
 		form = forms.AsignaUsuarioForm(initial={'id_empleado':empleado.cedula})
-		ruta = reverse('vAsignarUsuario', {'_id':empleado.cedula})
+
+		ruta = reverse('vAsignarUsuario', kwargs={'_id':empleado.cedula})
 
 		c = {'empresa':empresa, 'titulo':'Asignación de Usuario', 'seccion':'Empleados', 'empleado':empleado, 'ruta':ruta, 'form':form}
 		
@@ -448,7 +453,9 @@ def asignar_usuario(request, _id):
 				datos = form.cleaned_data
 
 				usuario = get_object_or_404(User, pk=datos['id_usuario'])
+
 				empleado.usuario = usuario
+
 				empleado.save()
 
 			except Exception as e:
@@ -479,7 +486,7 @@ def password_user_change(request):
 
 		form = forms.PasswordChangeForm()
 
-		ruta = reverse('vCambiarPassword', {'_id':_id})
+		ruta = reverse('vCambiarPassword', kwargs={'_id':_id})
 
 		c = {'empresa':empresa, 'titulo':'Cambio de Contraseña', 'seccion':'Contraseña de Usuario', 'form':form, 'ruta':ruta, 'empleado':empleado}
 		
@@ -584,7 +591,9 @@ def nueva_categoria(request):
 	if request.method == "GET":
 
 		empresa = getNombreEmpresa()
+
 		formset = CategoriaFormSet()
+
 		ruta = reverse('vNuavaCategoria')
 
 		c = {'titulo':'Ingreso de Categorias', 'seccion':'Categorias', 'empresa':empresa, 'formset':formset, 'ruta':ruta}
@@ -626,8 +635,10 @@ def editar_categoria(request, _id):
 	if request.method == "GET":
 
 		form = forms.EditCategoriaForm(categoria)
+
 		empresa = getNombreEmpresa()
-		ruta = reverse('vEditarCategorias')
+
+		ruta = reverse('vEditarCategoria', kwargs={'_id':_id})
 
 		c = {'titulo':'Edición de Categorías', 'seccion':'Categorías', 'form':form, 'empresa':empresa, 'ruta':ruta}
 
@@ -666,6 +677,7 @@ def eliminar_categoria(request, _id):
 	if request.method == "POST": # Pendiente de mejorar con bloque try/except
 
 		categoria = get_object_or_404(models.Categoria, pk=_id)
+
 		categoria.delete()
 
 		return redirect('lista_categorias', {'page':1})
@@ -678,9 +690,11 @@ def eliminar_categoria(request, _id):
 def lista_medidas(request, page):
 
 	empresa = getNombreEmpresa()
+
 	limite = settings.LIMITE_FILAS
 
 	unidades = get_list_or_404(models.Unidad)
+
 	paginador = Paginator(unidades, limite)
 
 	unidades = paginador.get_page(page)
@@ -699,9 +713,12 @@ def nueva_medida(request):
 	if request.method == "GET":
 
 		empresa = getNombreEmpresa()
+
 		formset = UnidadFormSet()
 
-		c = {'titulo':'Ingreso de Unidad de Medida', 'seccion':'Unidades de Medida', 'empresa':empresa, 'formset':formset}
+		ruta = reverse('vNuevaMedida')
+
+		c = {'titulo':'Ingreso de Unidad de Medida', 'seccion':'Unidades de Medida', 'empresa':empresa, 'formset':formset, 'ruta':ruta}
 
 		messages.info(request, 'Los campos con * son obligatorios')
 		
@@ -741,8 +758,10 @@ def editar_medida(request, _id):
 	if request.method == "GET":
 
 		form = forms.EditUnidadForm(unidad)
+
 		empresa = getNombreEmpresa()
-		ruta = reverse('vEditarMedida')
+
+		ruta = reverse('vEditarMedida', kwargs={'_id':_id})
 
 		c = {'titulo':'Edición de Unidad de Medida', 'seccion':'Unidades de Medida', 'form':form, 'empresa':empresa, 'ruta':ruta}
 

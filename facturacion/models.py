@@ -15,7 +15,7 @@ class Factura(models.Model):
 	vendedor = models.ForeignKey('Vendedor', on_delete=models.SET_NULL, null=True)
 	asiento = models.ForeignKey(Asiento, on_delete=models.PROTECT, null=True)
 	salida = models.ForeignKey(Salida, on_delete=models.PROTECT, null=True)
-	tipo = models.CharField('Tipo de Factura', choices=[('cr', 'Credito'), ('ct', 'Contado'), ('pf', 'Proforma')], max_length=2)
+	tipo = models.CharField('Tipo de Factura', choices=[('cr', 'Credito'), ('ct', 'Contado')], max_length=2)
 	tipo_pago = models.CharField('Forma de Pago', choices=[('ef', 'Efectivo'), ('tr', 'Tarjeta'), ('ck', 'Cheque')])
 	cancelada = models.BooleanField()
 	entregada = models.BooleanField()

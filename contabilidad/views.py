@@ -30,11 +30,15 @@ def index(request):
 def lista_cuentas(request, page):
 
 	empresa = getNombreEmpresa()
+
 	cuentas = models.Cuenta.objects.all()
+
 	limite = settings.LIMITE_FILAS
 
 	if cuentas.count() > 0:
+
 		paginador = Paginator(cuentas, limite)
+
 		cuentas = paginador.get_page(page)
 
 	c = {'titulo':'Catálogo de Cuentas', 'seccion':'Contabilidad', 'empresa':empresa, 'cuentas':cuentas}
@@ -48,10 +52,14 @@ def lista_cuentas(request, page):
 def ver_cuenta(request, _id):
 
 	cuenta = get_object_or_404(models.Cuenta, pk=_id)
+
 	empresa = getNombreEmpresa()
-	ruta_delete = reverse('vEliminarCuenta',{'_id':_id})
-	ruta_edit = reverse('vEditarCuenta', {'_id':_id})
-	ruta_cerrar = reverse('vCerrarCuenta', {'_id':_id})
+
+	ruta_delete = reverse('vEliminarCuenta', kwargs={'_id':_id})
+
+	ruta_edit = reverse('vEditarCuenta', kwargs={'_id':_id})
+
+	ruta_cerrar = reverse('vCerrarCuenta', kwargs={'_id':_id})
 
 	c = {'seccion':'Contabilidad', 'empresa':empresa, 'cuenta':cuenta, 'titulo':'Cuenta contable', 'ruta_delete':ruta_delete, 'ruta_edit':ruta_edit, 'ruta_cerrar':ruta_cerrar}
 
@@ -66,8 +74,11 @@ def nueva_cuenta(request):
 	if request.method == "GET":
 
 		empresa = getNombreEmpresa()
+
 		form = forms.CuentaForm()
+
 		ruta = reverse('vNuevaCuenta')
+
 		c = {'titulo':'Ingreso de Cuentas Contables', 'seccion':'Contabilidad', 'empresa':empresa, 'form':form, 'ruta':ruta}
 		
 		return render(request, 'core/forms/form_template.html', c)
@@ -83,6 +94,7 @@ def nueva_cuenta(request):
 			try:
 				
 				cuenta = form.save(commit=False)
+
 				cuenta.save()
 
 			except Exception as e:
@@ -108,8 +120,10 @@ def editar_cuenta(request, _id):
 	if request.method == "GET":
 		
 		empresa = getNombreEmpresa()
+
 		form = forms.EditCuentaForm(cuenta)
-		ruta = reverse('vEditarCuenta', {'_id':_id})
+
+		ruta = reverse('vEditarCuenta', kwargs={'_id':_id})
 
 		c = {'titulo':'Edición de Cuenta Contable', 'seccion':'Contabilidad', 'form':form, 'ruta':ruta, 'empresa':empresa}
 		
@@ -145,9 +159,11 @@ def editar_cuenta(request, _id):
 def cerrar_cuenta(request, _id):
 
 	if request.method == "POST":
+
 		cuenta = get_object_or_404(models.Cuenta, pk=_id)
 
 		cuenta.cerrada = True
+
 		cuenta.save()
 
 		return redirect('ver_cuenta', {'_id':_id})
@@ -158,6 +174,7 @@ def cerrar_cuenta(request, _id):
 def eliminar_cuenta(request, _id):
 
 	if request.method == "POST":
+
 		cuenta = get_object_or_404(models.Cuenta, pk=_id)
 
 		cuenta.delete()
@@ -252,13 +269,13 @@ def ver_asiento(request, _id):
 
 	empresa = getNombreEmpresa()
 
-	ruta_edit = reverse('vEditarAsiento', {'_id':asiento.id})
+	ruta_edit = reverse('vEditarAsiento', kwargs={'_id':asiento.id})
 
-	ruta_anular = reverse('vAnularAsiento', {'_id':asiento.id})
+	ruta_anular = reverse('vAnularAsiento', kwargs={'_id':asiento.id})
 
-	ruta_delete = reverse('vEliminarAsiento', {'_id':asiento.id})
+	ruta_delete = reverse('vEliminarAsiento', kwargs={'_id':asiento.id})
 
-	ruta_detalle = reverse('vDetalleAsiento', {'_id':asiento.id})
+	ruta_detalle = reverse('vDetalleAsiento', kwargs={'_id':asiento.id})
 
 	debito = 0.00
 	credito = 0.00
@@ -359,7 +376,7 @@ def eliminar_asiento(request, _id):
 
 @login_required
 @permission_required(['contabilidad.add_asiento', 'contabilidad.add_detalleasiento'])
-def detalle_asiento(request, _id):
+def detalle_asiento(request, _id, tipo=1):
 
 	asiento = get_object_or_404(models.Asiento, pk=_id)
 
@@ -369,6 +386,8 @@ def detalle_asiento(request, _id):
 
 	DetalleFormSet = inlineformset_factory(models.Asiento, models.DetalleAsiento, form=DetalleAsientoForm, extra=extra_rows)
 
+	ruta = reverse('vDetalleAsiento', kwargs={'_id':_id, 'tipo':tipo})
+
 	if request.method == "GET":
 		
 		empresa = getNombreEmpresa()
@@ -377,7 +396,7 @@ def detalle_asiento(request, _id):
 
 		messages.info(request, 'Los campos con * son obligatorios.')
 
-		c = {'titulo':'Detalle de Asiento Contable', 'seccion':'Contabilidad', 'empresa':empresa, 'formset':formset}
+		c = {'titulo':'Detalle de Asiento Contable', 'seccion':'Contabilidad', 'empresa':empresa, 'formset':formset, 'ruta':ruta}
 
 		return render(request, 'core/forms/inline_formset_template.html', c)
 
@@ -411,6 +430,18 @@ def detalle_asiento(request, _id):
 				messages.success(request, 'Los datos se registraron con éxito.')
 				
 				formset.save()
+
+				if tipo==1:
+					
+					return redirect('ver_asiento', {'_id':_id})
+
+				elif tipo==2:
+
+					factura = asiento.factura_set.first()
+
+					ruta = reverse('facturacion:vCancelarFactura', kwargs={'_id':factura.id})
+
+					return redirect(ruta) #redirect(reverse('vCancelarFactura', kwargs={'_id':factura.id}))
 
 
 
@@ -460,7 +491,7 @@ def editar_asiento(request, _id):
 
 		empresa = getNombreEmpresa()
 
-		ruta = reverse('vEditarAsiento', {'_id':asiento.id})
+		ruta = reverse('vEditarAsiento', kwargs={'_id':asiento.id})
 
 		c = {'titulo':'Modificar Asiento Contable', 'seccion':'Contabilidad', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
@@ -587,13 +618,13 @@ def ver_ejercicio(request, _id):
 
 	empresa = getNombreEmpresa()
 
-	ruta_activar = reverse('vActivarEjercicio', {'_id':_id})
+	ruta_activar = reverse('vActivarEjercicio', kwargs={'_id':_id})
 
-	ruta_edit = reverse('vEditarEjercicio', {'_id':_id})
+	ruta_edit = reverse('vEditarEjercicio', kwargs={'_id':_id})
 
-	ruta_delete = reverse('vEliminarEjercicio', {'_id':_id})
+	ruta_delete = reverse('vEliminarEjercicio', kwargs={'_id':_id})
 
-	ruta_periodos = reverse('vCrearPeriodos', {'_id':_id})
+	ruta_periodos = reverse('vCrearPeriodos', kwargs={'_id':_id})
 
 	c = {'titulo':'Ejercicio Contable', 'seccion':'Contabilidad', 'empresa':empresa, 'ejercicio':ejercicio, 'ruta_activar':ruta_activar, 'ruta_edit':ruta_edit, 'ruta_periodos':ruta_periodos, 'ruta_delete':ruta_delete}
 
@@ -609,6 +640,7 @@ def activar_ejercicio(request, _id):
 	ejercicio = get_object_or_404(models.Ejercicio, pk=_id)
 
 	activo = models.Ejercicio.objects.get(activo=True)
+
 	periodos_abiertos = activo.periodo_set.filter(cerrado=False)
 
 	if periodos_abiertos.count() > 0:
@@ -618,9 +650,11 @@ def activar_ejercicio(request, _id):
 		return redirect(reverse('vError'))
 
 	activo.activo = False
+
 	activo.save()
 
 	ejercicio.activo = True
+
 	ejercicio.save()
 
 	return redirect('lista_ejercicios')
@@ -648,12 +682,17 @@ def crear_periodos(request, _id):
 		rangomes = calendar.monthrange(anio, mes)
 
 		primerdia = datetime.date(anio, mes, 1)
+
 		ultimodia = datetime.date(anio, mes, rangomes[1])
 
 		periodo = models.Periodo()
+
 		periodo.ejercicio = ejercicio
+
 		periodo.nombre = meses[mes-1]
+
 		periodo.fecha_inicio = primerdia
+
 		periodo.fecha_final = ultimodia
 
 		periodo.save()
@@ -797,7 +836,7 @@ def contabilizar_periodo(request, _id):
 
 		cantidad_asientos = get_list_or_404(models.Asiento, fecha__gte=periodo.fecha_inicial, fecha__lte=periodo.fecha_final).count()
 
-		ruta = reverse('vContabilizarPeriodo')
+		ruta = reverse('vContabilizarPeriodo', kwargs={'_id':_id})
 
 		c = {'titulo':'Contabilizar Asientos Por Período', 'seccion':'Contabilidad', 'empresa':empresa, 'periodo':periodo, 'ruta':ruta, 'cantidad_asientos':cantidad_asientos}
 
@@ -819,6 +858,7 @@ def contabilizar_periodo(request, _id):
 		for asiento in asientos:
 
 			debitos = asiento.detalleasiento_set.filter(movimiento='db').aggregate(Sum('monto'))
+			
 			creditos = asiento.detalleasiento_set.filter(movimiento='cr').aggregate(Sum('monto'))
 
 			if (debitos['monto_sum'] - creditos['monto_sum']) == 0.00:

@@ -30,7 +30,7 @@ urlpatterns = [
 	path('categorias/', include([
 		path('page/<int:page>/', views.lista_categorias, name='vListaCategorias'),
 		path('nuevo/', views.nueva_categoria, name='vNuevaCategoria'),
-		path('editar/<int:_id>/', views.editar_categorias, name='vEditarCategoria'),
+		path('editar/<int:_id>/', views.editar_categoria, name='vEditarCategoria'),
 		path('eliminar/<int:_id>/', views.eliminar_categoria, name='vEliminarCategoria'),
 		])),
 	path('medidas/', include([

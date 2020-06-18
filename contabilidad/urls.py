@@ -22,7 +22,7 @@ urlpatterns = [
 		path('<int:_id>/editar/', views.editar_asiento, name='vEditarAsiento'),
 		path('<int:_id>/eliminar/', views.eliminar_asiento, name='vEliminarAsiento'),
 		path('<int:_id>/anular/', vews.anular_asiento, name='vAnularAsiento'),
-		path('<int:_id>/detalle/nuevo/', views.detalle_asiento, name='vDetalleAsiento'),
+		path('<int:_id>/type<int:tipo>/detalle/nuevo/', views.detalle_asiento, name='vDetalleAsiento'),
 		path('detalle-asiento/<int:_id>/eliminar/', views.eliminar_detalle_asiento, name='vEliminarDetalleAsiento'),
 		#path('<int:_id/detalle/editar/', views.editar_detalle_asiento, name='vEditarDetalleAsiento'),
 		])),
