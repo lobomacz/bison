@@ -12,9 +12,6 @@ import datetime, calendar, logging
 
 # Create your views here.
 
-def getNombreEmpresa():
-	return settings.NOMBRE_EMPRESA
-
 
 @login_required
 @permission_required(['contabilidad.view_asiento', 'contabilidad.view_cuenta', 'contabilidad.view_periodo'])
@@ -29,7 +26,7 @@ def index(request):
 @permission_required('contabilidad.view_cuenta')
 def lista_cuentas(request, page):
 
-	empresa = getNombreEmpresa()
+	empresa = settings.NOMBRE_EMPRESA
 
 	cuentas = models.Cuenta.objects.all()
 
@@ -53,7 +50,7 @@ def ver_cuenta(request, _id):
 
 	cuenta = get_object_or_404(models.Cuenta, pk=_id)
 
-	empresa = getNombreEmpresa()
+	empresa = settings.NOMBRE_EMPRESA
 
 	ruta_delete = reverse('vEliminarCuenta', kwargs={'_id':_id})
 
@@ -73,7 +70,7 @@ def nueva_cuenta(request):
 
 	if request.method == "GET":
 
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		form = forms.CuentaForm()
 
@@ -119,7 +116,7 @@ def editar_cuenta(request, _id):
 
 	if request.method == "GET":
 		
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		form = forms.EditCuentaForm(cuenta)
 
@@ -208,7 +205,7 @@ def lista_asientos(request, page=1):
 
 		asientos = paginador.get_page(page)
 
-	empresa = getNombreEmpresa()
+	empresa = settings.NOMBRE_EMPRESA
 
 	c = {'titulo':'Asientos Contables', 'seccion':'Contabilidad', 'empresa':empresa, 'asientos':asientos, 'periodos':periodos}
 
@@ -241,7 +238,7 @@ def lista_asientos_periodo(request, page, _id=None):
 @permission_required('contabilidad.view_asiento')
 def lista_asientos_fecha(request, page=1, inicio, final):
 
-	empresa = getNombreEmpresa()
+	empresa = settings.NOMBRE_EMPRESA
 
 	if request.method == "GET":
 
@@ -267,7 +264,7 @@ def ver_asiento(request, _id):
 
 	asiento = get_object_or_404(models.Asiento, pk=_id)
 
-	empresa = getNombreEmpresa()
+	empresa = settings.NOMBRE_EMPRESA
 
 	ruta_edit = reverse('vEditarAsiento', kwargs={'_id':asiento.id})
 
@@ -326,6 +323,8 @@ def anular_asiento(request, _id):
 			asiento.anulado = True
 
 			asiento.fecha_anulado = datetime.datetime.today()
+
+			asiento.anulado_por = request.user.empleado
 
 			asiento.save()
 
@@ -390,7 +389,7 @@ def detalle_asiento(request, _id, tipo=1):
 
 	if request.method == "GET":
 		
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		formset = DetalleFormSet(instance=asiento)
 
@@ -453,7 +452,7 @@ def nuevo_asiento(request):
 		
 		form = forms.AsientoForm()
 
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		ruta = reverse('vNuevoAsiento')
 
@@ -489,7 +488,7 @@ def editar_asiento(request, _id):
 
 		form = forms.AsientoForm(asiento)
 
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		ruta = reverse('vEditarAsiento', kwargs={'_id':asiento.id})
 
@@ -497,7 +496,7 @@ def editar_asiento(request, _id):
 
 		messages.info(request, 'Los campos con * son obligatorios.')
 
-		return render(request, 'form_asiento.html', c)
+		return render(request, 'core/forms/form_template.html', c)
 
 	elif request.method == 'POST':
 
@@ -521,14 +520,20 @@ def eliminar_detalle_asiento(request, _id):
 	if request.method == 'POST':
 		
 		detalle = get_object_or_404(models.DetalleAsiento, pk=_id)
-		
-		id_asiento = detalle.asiento.id
+
+		asiento = detalle.asiento
+
+		if asiento.contabilizado == True or asiento.anulado == True:
+			
+			messages.error(request, "El asiento ha sido contabilizado o anulado. No se puede eliminar la línea de detalle.")
+
+			return redirect('ver_asiento', {'_id':asiento.id})
 
 		detalle.delete()
 
 		messages.success(request, 'El registro se eliminó con éxito.')
 
-		return redirect('ver_asiento', {'_id':id_asiento})
+		return redirect('ver_asiento', {'_id':asiento.id})
 
 
 
@@ -538,7 +543,7 @@ def eliminar_detalle_asiento(request, _id):
 @permission_required('contabilidad.view_ejercicio')
 def lista_ejercicios(request, page=1):
 
-	empresa = getNombreEmpresa()
+	empresa = settings.NOMBRE_EMPRESA
 
 	ejercicios = models.Ejercicio.objects.all()
 
@@ -577,9 +582,7 @@ def nuevo_ejercicio(request):
 	
 	if request.method == "GET":
 		
-		empresa = getNombreEmpresa()
-
-		ejercicio = models.Ejercicio()
+		empresa = settings.NOMBRE_EMPRESA
 
 		form = forms.EjercicioForm()
 
@@ -616,7 +619,7 @@ def ver_ejercicio(request, _id):
 
 	ejercicio = get_object_or_404(models.Ejercicio, pk=_id)
 
-	empresa = getNombreEmpresa()
+	empresa = settings.NOMBRE_EMPRESA
 
 	ruta_activar = reverse('vActivarEjercicio', kwargs={'_id':_id})
 
@@ -637,27 +640,29 @@ def ver_ejercicio(request, _id):
 @permission_required('contabilidad.change_ejercicio')
 def activar_ejercicio(request, _id):
 
-	ejercicio = get_object_or_404(models.Ejercicio, pk=_id)
+	if request.method == "POST":
 
-	activo = models.Ejercicio.objects.get(activo=True)
+		ejercicio = get_object_or_404(models.Ejercicio, pk=_id)
 
-	periodos_abiertos = activo.periodo_set.filter(cerrado=False)
+		activo = models.Ejercicio.objects.get(activo=True)
 
-	if periodos_abiertos.count() > 0:
+		periodos_abiertos = activo.periodo_set.filter(cerrado=False)
 
-		messages.error(request, 'Existen períodos contables abiertos en el ejercicio activo.')
+		if periodos_abiertos.count() > 0:
 
-		return redirect(reverse('vError'))
+			messages.error(request, 'Existen períodos contables abiertos en el ejercicio activo.')
 
-	activo.activo = False
+			return redirect(reverse('vError'))
 
-	activo.save()
+		activo.activo = False
 
-	ejercicio.activo = True
+		activo.save()
 
-	ejercicio.save()
+		ejercicio.activo = True
 
-	return redirect('lista_ejercicios')
+		ejercicio.save()
+
+		return redirect('ver_ejercicio', {'_id':_id})
 
 
 
@@ -713,7 +718,7 @@ def editar_periodo(request, _id):
 		
 		form = forms.PeriodoForm(periodo)
 
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		c = {'empresa':empresa, 'form':form, '_id':_id, 'titulo':'Editar Período Contable', 'seccion':'Contabilidad'}
 
@@ -754,7 +759,7 @@ def eliminar_periodo(request, _id):
 
 	if request.method == "GET":
 
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		c = {'empresa':empresa, 'titulo':'Eliminar Período', 'mensaje':'Se eliminará el registro de la base de datos.', 'view':'vEliminarPeriodo', '_id':_id, 'seccion':'Contabilidad'}
 		
@@ -807,8 +812,10 @@ def activar_periodo(request, _id):
 
 			logging.error(e)
 
-			return redirect(reverse('vError'))
+			#return redirect(reverse('vError'))
+			return redirect('ver_ejercicio', {'_id':periodo.ejercicio.id})
 
+		messages.success(request, "El período fue activado con éxito.")
 
 		return redirect('ver_ejercicio', {'_id':periodo.ejercicio.id})
 
@@ -832,7 +839,7 @@ def contabilizar_periodo(request, _id):
 
 	if request.method == "GET":
 		
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		cantidad_asientos = get_list_or_404(models.Asiento, fecha__gte=periodo.fecha_inicial, fecha__lte=periodo.fecha_final).count()
 
@@ -916,7 +923,7 @@ def cerrar_periodo(request, _id):
 
 	if request.method == "GET":
 		
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		c = {'titulo':'Cierre de Período Contable', 'seccion':'Contabilidad', 'empresa':empresa, 'view':'vCerrarPeriodo', '_id':_id, 'mensaje':'Se contabilizarán todos los asientos del período.'}
 
@@ -942,7 +949,7 @@ def cerrar_periodo(request, _id):
 			
 				return render(request, 'error.html', c)
 
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		c = {'titulo':'Período Cerrado con Exito', 'seccion':'Contabilidad', 'empresa':empresa, 'view':'vIndexContabilidad'}
 

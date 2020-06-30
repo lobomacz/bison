@@ -6,9 +6,9 @@ from django.forms import formset_factory, modelformset_factory, inlineformset_fa
 from django.contrib import messages
 from django.contrib.auth import login_required, permission_required
 from django.db.models imort Q, Sum
-from bison.core.models import Empleado
+from bison.core.models import Empleado, Unidad, Producto
 from bison.contabilidad.models import Cuenta, Asiento, DetalleAsiento
-from bison.inventario.models import Producto
+#from bison.inventario.models import Producto
 from . import models, forms
 import datetime, calendar, logging
 
@@ -170,7 +170,7 @@ def detalle_proforma(request, _id):
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
-		return render(request, 'core/forms/formset_template.html', c)
+		return render(request, 'core/forms/inline_formset_template.html', c)
 
 	elif request.method == "POST":
 
@@ -321,7 +321,7 @@ def editar_proforma(request, _id):
 
 @login_required
 @permission_required(['facturacion.add_proforma', 'facturacion.change_proforma'])
-def reemitir_proforma(request, _id):
+def re_proforma(request, _id):
 
 	if request.method == 'POST':
 
@@ -357,6 +357,8 @@ def anular_proforma(request, _id):
 		proforma.anulado_por = empleado
 
 		proforma.save()
+
+		messages.success(request, "La proforma se anuló con éxito.")
 
 		return redirect('ver_proforma', {'_id':_id})
 
@@ -409,7 +411,7 @@ def detalle_factura(request, _id):
 
 		c = {'titulo':'Detalle de Factura', 'seccion':'Facturación', 'empresa':empresa, 'formset':formset, 'factura':factura, 'ruta':ruta}
 
-		return render(request, 'core/forms/formset_template.html', c)
+		return render(request, 'core/forms/inline_formset_template.html', c)
 
 	elif request.method == "POST":
 		
@@ -449,7 +451,30 @@ def detalle_factura(request, _id):
 
 			return redirect('ver_factura', {'_id':_id})
 
-		
+
+
+@login_required
+@permission_required('facturacion.change_factura')
+def eliminar_detalle_factura(request, _id, _idd):
+
+	if request.method == "POST":
+
+		factura = get_object_or_404(models.Factura, pk=_id)
+
+		if factura.cancelada or factura.anulada:
+			
+			messages.error(request, "No puede hacer modificaciones a esta factura.")
+
+			return redirect('ver_factura', {'_id':_id})
+
+		detalle = factura.detallefactura_set.get(_idd)
+
+		detalle.delete()
+
+		messages.success(request, "La línea de detalle se eliminó con éxito.")
+
+		return redirect('detalle_factura', {'_id':_id})
+
 
 
 @login_required
@@ -459,12 +484,8 @@ def nueva_factura(request):
 	if request.method == "GET":
 
 		hoy = datetime.date.today()
-
-		factura = models.Factura()
-
-		factura.fecha = hoy
 		
-		form = forms.fFactura(factura)
+		form = forms.fFactura(initial={'fecha':hoy})
 
 		empresa = settings.NOMBRE_EMPRESA
 
@@ -482,7 +503,7 @@ def nueva_factura(request):
 
 		if form.is_valid():
 
-			empleado = request.user.usuario.empleado if request.user.usuario != None else None
+			empleado = request.user.empleado #if request.user.empleado != None else None
 			
 			factura = form.save(commit=False)
 
@@ -504,7 +525,7 @@ def editar_factura(request, _id):
 
 	factura = get_object_or_404(models.Factura, pk=_id)
 
-	if factura.cancelada == True or factura.anulada == True:
+	if factura.cancelada or factura.anulada:
 		
 		messages.error(request, "No puede editar datos del registro.")
 
@@ -568,69 +589,245 @@ def asiento_factura(request, _id):
 @permission_required('facturacion.cancelar_factura')
 def cancelar_factura(request, _id):
 
-	factura = get_object_or_404(models.Factura, pk=_id)
+	if request.method == "POST":
 
-	if factura.asiento == None || factura.asiento.detalleasiento_set.all().count() == 0:
+		factura = get_object_or_404(models.Factura, pk=_id)
 
-		asiento = None
+		if factura.asiento == None || factura.asiento.detalleasiento_set.all().count() == 0:
 
-		if factura.asiento == None:
+			asiento = None
 
-			fecha = datetime.date.today()
+			if factura.asiento == None:
 
-			descripcion = "Venta de producto al contado" if factura.tipo == 'ct' else "Venta de producto al crédito"
+				fecha = datetime.date.today()
 
-			asiento = Asiento()
+				descripcion = "Venta de producto al contado" if factura.tipo == 'ct' else "Venta de producto al crédito"
 
-			asiento.fecha = fecha 
+				asiento = Asiento()
 
-			asiento.descripcion = descripcion
+				asiento.fecha = fecha 
 
-			asiento.referencia = "Factura No.{}".format(factura.id)
+				asiento.descripcion = descripcion
 
-			asiento.observaciones = "Documento No. {}".format(factura.no_documento)
+				asiento.referencia = "Factura No.{}".format(factura.id)
 
-			asiento.save()
+				asiento.observaciones = "Documento No. {}".format(factura.no_documento)
 
-			factura.asiento = asiento
+				asiento.save()
 
-			factura.save()
+				factura.asiento = asiento
+
+				factura.save()
+
+			else:
+
+				asiento = factura.asiento
+
+			messages.info(request, "Por favor ingrese el detalle del asiento contable.")
+
+			ruta = reverse('contabilidad:vDetalleAsiento', kwargs={'_id':asiento.id, 'tipo':2})
+
+			return redirect(ruta) #redirect(reverse('vDetalleAsiento', kwargs={'_id':asiento.id, 'tipo':2}))
 
 		else:
 
-			asiento = factura.asiento
+			factura.cancelada = True
 
-		messages.info(request, "Por favor ingrese el detalle del asiento contable.")
+			factura.save()
 
-		ruta = reverse('contabilidad:vDetalleAsiento', kwargs={'_id':asiento.id, 'tipo':2})
+			messages.success(request, "Factura cancelada.")
 
-		return redirect(ruta) #redirect(reverse('vDetalleAsiento', kwargs={'_id':asiento.id, 'tipo':2}))
+			return redirect('ver_factura', {'_id':_id})
 
-	else:
 
-		factura.cancelada = True
+@login_required
+@permission_required('facturacion.anular_factura')
+def anular_factura(request, _id):
+	
+	if request.method == "POST":
+		
+		factura = get_object_or_404(models.Factura, pk=_id)
+
+		if factura.cancelada:
+			
+			messages.error(request, "La factura está cancelada. No se puede anular.")
+
+			return redirect('ver_factura', {'_id':_id})
+
+		empleado = request.user.empleado
+
+		fecha = datetime.date.today()
+
+		factura.anulada_por = empleado
+
+		factura.fecha_anulada = fecha
+
+		factura.anulada = True
 
 		factura.save()
 
-		messages.success(request, "La factura se registró como cancelada.")
+		if factura.asiento != None:
+			
+			asiento = factura.asiento
+
+			asiento.anulado = True
+
+			asiento.anulado_por = request.user.empleado
+
+			asiento.fecha_anulado = datetime.date.today()
+
+			asiento.save()
+
+		messages.success(request, "La factura ha sido anulada.")
 
 		return redirect('ver_factura', {'_id':_id})
+
+
+
+@login_required
+@permission_required('facturacion.view_cliente')
+def clientes(request, page=1):
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	ruta = reverse('vBuscarCliente')
+
+	if request.method == "GET":
+	
+		clientes = get_list_or_404(models.Cliente)
+
+		limite = settings.LIMITE_FILAS
+
+		if clientes.count() > limite:
+			
+			paginador = Paginator(clientes, limite)
+
+			clientes = paginador.get_page(page)
+
+		c = {'titulo':'Lista de Clientes', 'seccion':'Facturación', 'empresa':empresa, 'clientes':clientes, 'page':page, 'ruta':ruta}
+
+		return render(request, 'facturacion/lista_clientes.html', c)
+
+	elif request.method == "POST":
+
+		cliente_id = request.POST['cliente_id']
+
+		return redirect('ver_cliente', {'_id':cliente_id})
+
+
+
+
+@login_required
+@permission_required('facturacion.view_cliente')
+def ver_cliente(request, _id):
+
+	cliente = get_object_or_404(models.Cliente, pk=cliente_id)
+
+	ruta_edit = reverse('vEditarCliente', kwargs={'_id':cliente_id})
+
+	c = {'titulo':'Datos de Cliente', 'seccion':'Facturación', 'empresa':empresa, 'cliente':cliente, 'ruta_edit':ruta_edit}
+
+	return render('facturacion/ver_cliente.html', c)
+
+
+
+
+@login_required
+@permission_required('facturacion.add_cliente')
+def nuevo_cliente(request):
+
+	if request.method == "GET":
+		
+		empresa = settings.NOMBRE_EMPRESA
+
+		form = forms.fCliente()
+
+		ruta = reverse('vNuevoCliente')
+
+		c = {'titulo':'Ingreso de Clientes', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/form_template.html', c)
+
+	elif request.method == "POST":
+		
+		form = forms.fCliente(request.POST)
+
+		if form.is_valid():
+			
+			cliente = form.save(commit=False)
+
+			cliente.save()
+
+			messages.success(request, "El cliente se registró con éxito.")
+
+			return redirect('ver_cliente', {'_id':cliente.id})
+
+
+
+@login_required
+@permission_required('facturacion.change_cliente')
+def editar_cliente(request, _id):
+
+	cliente = get_object_or_404(_id)
+
+	if request.method == "GET":
+		
+		empresa = settings.NOMBRE_EMPRESA
+
+		form = forms.fCliente(cliente)
+
+		ruta = reverse('vEditarCliente', kwargs={'_id':cliente.id})
+
+		c = {'seccion':'Facturación', 'titulo':'Editar Datos de Cliente', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/form_template.html', c)
+
+	elif request.method == "POST":
+		
+		form = forms.fCliente(request.POST, instance=cliente)
+
+		if form.is_valid():
+			
+			form.save()
+
+			messages.success(request, "Los datos se actualizaron con éxito.")
+
+			return redirect('ver_cliente', {'_id':cliente.id})
 
 
 
 
 @login_required
 @permission_required('facturacion.view_ordenruta')
-def lista_ordenes_ruta(request):
+def lista_ordenes_ruta(request, page=1):
+
+	limite = settings.LIMITE_FILAS
 	
 	ordenes = get_list_or_404(models.OrdenRuta, liquidado=False, anulado=False)
 
+	if ordenes.count() > limite:
+		
+		paginador = Paginator(ordenes, limite)
+
+		ordenes = paginador.get_page(page)
+
 	empresa = settings.NOMBRE_EMPRESA
 
-	c = {'titulo':'Indice de Ordenes de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'ordenes':ordenes}
+	c = {
+	'titulo':'Lista de Ordenes de Ruta', 
+	'seccion':'Facturación', 
+	'empresa':empresa, 
+	'ordenes':ordenes, 
+	'page':page
+	}
 
-	return render(request, 'lista_ordenes_ruta.html', c)
+	return render(request, 'facturacion/lista_ordenes_ruta.html', c)
 	
+
 
 
 @login_required
@@ -641,9 +838,31 @@ def ver_orden_ruta(request, _id):
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	c = {'titulo':'Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'orden':orden}
+	params = {'_id':_id}
 
-	return render(request, 'ver_orden_ruta.html', c)
+	ruta_edit = reverse('vEditarOrdenRuta', kwargs=params)
+
+	ruta_anular = reverse('vAnularOrdenRuta', kwargs=params)
+
+	ruta_entregar = reverse('vEntregarOrdenRuta', kwargs=params)
+
+	ruta_autorizar = reverse('vAutorizarOrdenRuta', kwargs=params)
+
+	ruta_liquidar = reverse('vLiquidarOrdenRuta', kwargs=params)
+
+	c = {
+	'titulo':'Orden de Ruta', 
+	'seccion':'Facturación', 
+	'empresa':empresa, 
+	'orden':orden, 
+	'ruta_edit':ruta_edit, 
+	'ruta_anular':ruta_anular, 
+	'ruta_autorizar':ruta_autorizar, 
+	'ruta_liquidar':ruta_liquidar,
+	'ruta_entregar':ruta_entregar
+	}
+
+	return render(request, 'facturacion/ver_orden_ruta.html', c)
 
 
 
@@ -653,11 +872,15 @@ def detalle_orden_ruta(request, _id):
 	
 	orden = get_object_or_404(models.OrdenRuta, pk=_id)
 
-	if orden.anulado or orden.liquidado:
-		
-		return render(request, 'error.html', {'titulo':'Error de Acceso', 'seccion':'Facturación', 'empresa':settings.NOMBRE_EMPRESA, 'mensaje':'La orden de ruta no puede ser modificada.', 'view':'vListaOrdenesRuta'})
+	if orden.autorizado or orden.anulado or orden.liquidado:
 
-	extra_row = 4 if orden.detalleordenruta_set.all() != None else 10
+		ruta = reverse('vVerOrdenRuta', kwargs={'_id':_id})
+
+		messages.error(request, 'No se puede modificar el detalle de la orden de ruta.')
+		
+		return redirect(ruta) #render(request, 'error.html', {'titulo':'Error de Acceso', 'seccion':'Facturación', 'empresa':settings.NOMBRE_EMPRESA, 'mensaje':'La orden de ruta no puede ser modificada.', 'view':'vListaOrdenesRuta'})
+
+	extra_row = 4 if orden.detalleordenruta_set.count() > 0 else 10
 
 	DetalleFormset = inlineformset_factory(models.OrdenRuta, models.DetalleOrdenRuta, form=forms.fDetalleOrdenRuta, extra=extra_row)
 
@@ -667,9 +890,13 @@ def detalle_orden_ruta(request, _id):
 
 		formset = DetalleFormset(instance=orden)
 
-		c = {'titulo':'Detalle de Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'formset':formset, 'id':_id}
+		ruta = reverse('vDetalleOrdenRuta', kwargs={'_id':_id})
 
-		return render(request, 'detalle_orden_ruta.html', c)
+		c = {'titulo':'Detalle de Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'formset':formset, 'ruta':ruta}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/inline_formset_template.html', c)
 
 	elif request.method == "POST":
 		
@@ -684,14 +911,11 @@ def detalle_orden_ruta(request, _id):
 				detalle.total = detalle.producto.precio_unit * detalle.cantidad_entregada
 
 				detalle.save()
-			
 
-			return redirect('ver_orden_ruta', {'_id':orden.id})
+			messages.success(request, "Los datos se registraron con éxito.")
 
-		else:
-
-			return render(request, 'error.html', {'titulo':'Error de Validación', 'mensaje':'Los datos ingresados no son válidos. Revise y vuelva a intentarlo.', 'view':'vListaOrdenesRuta'})
-
+			return redirect('ver_orden_ruta', {'_id':_id})
+		
 
 
 
@@ -703,32 +927,37 @@ def nueva_orden_ruta(request):
 		
 		empresa = settings.NOMBRE_EMPRESA
 
-		form = forms.fOrdenRuta()
+		fecha_actual = datetime.date.today()
 
-		c = {'titulo':'Nueva Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'form':form}
+		form = forms.fOrdenRuta(initial={'fecha':fecha_actual})
 
-		return render(request, 'form_orden_ruta.html', c)
+		ruta = reverse('vNuevaOrdenRuta')
+
+		c = {'titulo':'Nueva Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/form_template.html', c)
 
 	elif request.method == "POST":
 		
 		form = forms.fOrdenRuta(request.POST)
 
 		if form.is_valid():
-
-			empleado = request.user.usuario.empleado if request.user.usuario != None else None
 			
 			orden = form.save(commit=False)
 
-			orden.digitador = empleado
+			orden.digitador = request.user.empleado
 
 			orden.save()
 
+			messages.success(request, "Los datos se registraron con éxito.")
+
+			messages.info(request, "A continuación, ingresar el detalle de la orden.")
+
 			return redirect('detalle_orden_ruta', {'_id':orden.id})
 
-		else:
-
-			return render(request, 'error.html', {'titulo':'Error de Validación', 'mensaje':'Los datos ingresados no son válidos. Revise y vuelva a intentarlo.', 'view':'vIndexFacturacion'})
-
+		
 
 
 @login_required
@@ -739,13 +968,17 @@ def editar_orden_ruta(request, _id):
 
 	if request.method == "GET":
 
-		form = forms.fOrdenRuta(orden)
+		form = forms.fEditOrdenRuta(orden)
 
 		empresa = settings.NOMBRE_EMPRESA
 
-		c = {'titulo':'Editar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'id':orden.id}
+		ruta = reverse('vEditarOrdenRuta', kwargs={'_id':_id})
 
-		return render(request, 'form_orden_ruta.html', c)
+		c = {'titulo':'Editar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/form_template.html', c)
 
 	elif request.method == "POST":
 		
@@ -755,186 +988,364 @@ def editar_orden_ruta(request, _id):
 			
 			form.save()
 
+			messages.success(request, "Orden modificada con éxito.")
+
+			messages.info(request, "A continuación editar detalle de la orden.")
+
 			return redirect('detalle_orden_ruta', {'_id':orden.id})
 
-		else:
-
-			return render(request, 'error.html', {'titulo':'Error de Validación', 'mensaje':'Los datos ingresados no son válidos. Revise y vuelva a intentarlo.', 'view':'vListaOrdenesRuta'})
-
+		
 
 
 @login_required
-@permission_required('facturacion.change_ordenruta')
+@permission_required('facturacion.autorizar_ordenruta')
 def autorizar_orden_ruta(request, _id):
+
+	if request.method == "POST":
 	
-	orden = get_object_or_404(models.OrdenRuta, pk=_id)
+		orden = get_object_or_404(models.OrdenRuta, pk=_id)
 
-	if not orden.autorizado:
+		if orden.anulado:
+			
+			messages.error(request, "La orden está anulada. No se puede autorizar.")
 
-		if request.method == "GET":
-		
-			empresa = settings.NOMBRE_EMPRESA
+			return redirect('ver_orden_ruta', {'_id':_id})
 
-			c = {'titulo':'Autorizar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'mensaje':'Se autorizará la orden de ruta.', 'view':'vAutorizarOrdenRuta', 'id':orden.id, 'empleado':empleado}
 
-			return render(request, 'warning_template.html', c)
-
-		elif request.method == "POST":
-
-			empleado = request.user.usuario.empleado if request.user.usuario != None else None
+		if not orden.autorizado:
 
 			orden.autorizado = True
 
-			orden.autorizado_por = empleado
+			orden.autorizado_por = request.user.empleado
 
 			orden.save()
 
-			return redirect('lista_ordenes_ruta')
+			messages.success(request, "Orden autorizada con éxito.")
 
-	else:
+		else:
 
-		return render(request, 'error.html', {'titulo':'Error!', 'seccion':'Facturación', 'mensaje':'La orden ya fue autorizada.', 'view':'vListaOrdenesRuta'})
+			messages.warning(request, "La orden ya ha sido autorizada.")
 
+		return redirect('ver_orden_ruta', {'_id':_id})
 
-@login_required
-@permission_required('facturacion.change_ordenruta')
-def entregar_orden_ruta(request, _id):
 	
-	orden = get_object_or_404(models.OrdenRuta, pk=_id)
-
-	if not orden.autorizado:
-
-		return render(request, 'error.html', {'titulo':'Error!', 'seccion':'Facturación', 'mensaje':'La orden no ha sido autorizada.', 'view':'vListaOrdenesRuta'})
-
-	else:
-
-		if request.method == 'GET':
-			
-			empresa = settings.NOMBRE_EMPRESA
-
-			c = {'titulo':'Entregar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'view':'vEntregarOrdenRuta', 'id':orden.id}
-
-			return render(request, 'entregar_orden_ruta.html', c)
-
-		elif request.method == 'POST':
-			
-			empleado = request.user.usuario.empleado if request.user.usuario != None else None
-
-			orden.entregado = True
-
-			orden.entregado_por = empleado
 
 
 @login_required
 @permission_required('facturacion.delete_ordenruta')
 def eliminar_orden_ruta(request, _id):
+
+	if request.method == "POST":
 	
-	orden = get_object_or_404(models.OrdenRuta, pk=_id)
+		orden = get_object_or_404(models.OrdenRuta, pk=_id)
 
-	if orden.autorizado and orden.entregado:
-		
-		return render(request, 'error.html', {'titulo':'Error!', 'seccion':'Facturación', 'mensaje':'La orden fue autorizada y entregada. No se puede eliminar.', 'view':'vListaOrdenesRuta'})
+		if orden.autorizado or orden.entregado:
 
-	else:
-
-		if request.method == "GET":
+			messages.error(request, "La orden ya fue autorizada/entregada. No puede se puede eliminar hasta ser liquidada.")
 			
-			empresa = settings.NOMBRE_EMPRESA
+			return redirect('ver_orden_ruta', {'_id':_id}) 
 
-			c = {'titulo':'Eliminar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'mensaje':'Se eliminará la orden de ruta.', 'view':'vEliminarOrdenRuta', 'id':orden.id}
+		else:
 
-			return render(request, 'warning_template.html', c)
-
-		elif request.method == "POST":
-			
 			orden.delete()
+
+			messages.error(request, "La orden se eliminó con éxito.")
 
 			return redirect('lista_ordenes_ruta')
 
 
+
+
 @login_required
 @permission_required('facturacion.delete_detalleordenruta')
-def eliminar_detalle_orden_ruta(request, _id):
-	
-	orden = get_object_or_404(models.DetalleOrdenRuta, pk=_id).orden
-
-	if orden.autorizado or orden.anulado:
-		
-		return render(request, 'error.html', {'titulo':'Error!', 'seccion':'Facturación', 'mensaje':'No se puede eliminar la línea de detalle.', 'view':'vListaOrdenesRuta'})
-
-	else:
-
-		if request.method == "GET":
-			
-			empresa = settings.NOMBRE_EMPRESA
-
-			c = {'titulo':'Eliminar Detalle de Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'mensaje':'Se eliminará la línea de detalle de la orden de ruta.', 'view':'vEliminarDetalleOrdenRuta', 'id':orden.id, 'idd':'_idd'}
-
-			return render(request, 'warning_template.html', c)
-
-		elif request.method == "POST":
-			
-			detalle = orden.detalleordenruta_set.filter(_idd)
-
-			detalle.delete()
-
-			return redirect('ver_orden_ruta', {'_id':orden.id})
-
-
-@login_required
-@permission_required(['facturacion.change_ordenruta', 'facturacion.change_detalleordenruta'])
-def liquidar_orden_ruta(request, _id):
+def eliminar_detalle_orden_ruta(request, _id, _idd):
 	
 	orden = get_object_or_404(models.OrdenRuta, pk=_id)
 
-	if orden.anulado or orden.liquidado:
-		
-		return render(request, 'error.html', {'titulo':'Error de Acceso', 'seccion':'Facturación', 'empresa':settings.NOMBRE_EMPRESA, 'mensaje':'La orden de ruta no puede ser modificada.', 'view':'vListaOrdenesRuta'})
+	if orden.autorizado or orden.anulado:
 
-	DetalleFormset = inlineformset_factory(models.OrdenRuta, models.DetalleOrdenRuta, form=forms.fLiquidaDetalleOrdenRuta)
+		messages.error(request, "Orden autorizada o anulada. No puede eliminar el detalle.")
+		
+		return redirect('ver_orden_ruta', {'_id':_id})#render(request, 'error.html', {'titulo':'Error!', 'seccion':'Facturación', 'mensaje':'No se puede eliminar la línea de detalle.', 'view':'vListaOrdenesRuta'})
+
+	else:
+			
+		detalle = orden.detalleordenruta_set.filter(_idd)
+
+		detalle.delete()
+
+		messages.success(request, "Detalle eliminado con éxito.")
+
+		return redirect('ver_orden_ruta', {'_id':_id})
+
+
+
+@login_required
+@permission_required('facturacion.view_vendedor')
+def lista_vendedores(request, page=1):
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	vendedores = get_list_or_404(models.Vendedor)
+
+	limite = settings.LIMITE_FILAS
+
+	if vendedores.count() > limite:
+		
+		paginador = Paginator(vendedores, limite)
+
+		vendedores = paginador.get_page(page)
+
+	c = {'titulo':'Lista de Vendedores', 'seccion':'Facturación', 'vendedores':vendedores, 'empresa':empresa, 'page':page}
+
+	return render(request, 'facturacion/lista_vendedores.html', c)
+
+
+
+@login_required
+@permission_required('facturacion.view_vendedor')
+def ver_vendedor(request, _id):
+
+	vendedor = get_object_or_404(models.Vendedor, pk=_id)
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	params = {'_id':_id}
+
+	ruta_edit = reverse('vEditarVendedor', kwargs=params)
+
+	ruta_desactivar = reverse('vDesactivarVendedor', kwargs=params)
+
+	c = {'titulo':'Datos de Vendedor', 'seccion':'Facturación', 'vendedor':vendedor, 'empresa':empresa, 'ruta_edit':ruta_edit, 'ruta_desactivar':ruta_desactivar}
+
+	return render(request, 'facturacion/ver_vendedor.html', c)
+
+
+@login_required
+@permission_required('facturacion.add_vendedor')
+def nuevo_vendedor(request):
+
+	if request.method == "GET":
+		
+		ruta = reverse('vNuevoVendedor')
+
+		empresa = settings.NOMBRE_EMPRESA
+
+		form = forms.fVendedor()
+
+		c = {'titulo':'Ingreso de Vendedor', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+		return render(request, 'core/forms/form_template.html', c)
+
+	elif request.method == "POST":
+		
+		form = forms.fVendedor(request.POST)
+
+		if form.is_valid():
+
+			vendedor = form.save(commit=False)
+
+			vendedor.save()
+
+			messages.success(request, "Los datos se registraron con éxito.")
+
+			return redirect('ver_vendedor', {'_id':_id})
+
+
+
+@login_required
+@permission_required('facturacion.change_vendedor')
+def editar_vendedor(request, _id):
+
+	vendedor = get_object_or_404(models.Vendedor, pk=_id)
+
+	if vendedor.desactivado:
+		
+		messages.error(request, "El registro ha sido desactivado. No puede modificarse.")
+
+		return redirect('ver_vendedor', {'_id':_id})
 
 	if request.method == "GET":
 		
 		empresa = settings.NOMBRE_EMPRESA
 
-		formset = DetalleFormset(instance=orden)
+		form = forms.fVendedor(vendedor)
 
-		c = {'titulo':'Liquidación de Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'formset':formset, 'view':'vLiquidarOrdenRuta', 'id':orden.id}
+		ruta = reverse('vEditarVendedor', kwargs={'_id':_id})
 
-		return render(request, 'form_orden_ruta.html', c)
+		c = {'titulo':'Editar Datos de Vendedor', 'seccion':'Facturación', 'form':form, 'empresa':empresa, 'ruta':ruta}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/form_template.html', c)
 
 	elif request.method == "POST":
 		
-		formset = DetalleFormset(request.POST, request.FILES, instance=orden)
+		form = forms.fVendedor(request.POST, instance=vendedor)
 
-		if formset.is_valid():
+		if form.is_valid():
 			
-			for form in formset.forms:
+			form.save()
 
-				detalle = form.save(commit=False)
+			messages.success(request, "Los datos se actualizaron con éxito.")
 
-				costo_producto = detalle.producto.costo_unit
-
-				detalle.costo_vendido = detalle.cantidad_vendida * costo_producto
-
-				detalle.costo_faltante = (detalle.cantidad_entregada - (detalle.cantidad_vendida + detalle.cantidad_recibida)) * costo_producto if detalle.cantidad_entregada > (detalle.cantidad_vendida + detalle.cantidad_recibida) else 0.00
-
-				detalle.save()
+			return redirect('ver_vendedor', {'_id':_id})
 
 
-			if not orden.detalleordenruta_set.all().aggregate(Sum('costo_faltante')) > 0.00:
-				
-				empleado = request.user.usuario.empleado if request.user.usuario != None else None
 
-				orden.liquidado = True
+@login_required
+@permission_required('facturacion.desactivar_vendedor')
+def desactivar_vendedor(request, _id):
 
-				orden.liquidado_por = empleado
+	if request.method == "POST":
+		
+		vendedor = get_object_or_404(models.Vendedor, pk=_id)
 
-			return redirect('ver_orden_ruta', {'_id':orden.id})
+		if not vendedor.activo:
+			
+			messages.warning(request, "El vendedor ya no es activo.")
 
-		else:
+			return redirect('ver_vendedor',{'_id':_id})
 
-			return render(request, 'error.html', {'titulo':'Error!', 'seccion':'Facturación', 'mensaje':'Los datos no son válidos.', 'view':'vVerOrdenRuta', 'id':_id})
+		vendedor.activo = False
+
+		'''
+
+		user = vendedor.empleado.user
+
+		if user != None:
+			
+			user.is_active = False
+
+			user.save()
+
+		'''
+
+		vendedor.save()
+
+		messages.success(request, "El vendedor se ha desactivado.")
+
+		return redirect('ver_vendedor', {'_id':_id})
+
+
+
+
+@login_required
+@permission_required('facturacion.view_ruta')
+def lista_rutas(request):
+
+	rutas = get_list_or_404(models.Ruta)
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	c = {'titulo':'Listado de Rutas', 'seccion':'Facturación', 'empresa':empresa, 'rutas':rutas}
+
+	return render(request, 'facturacion/lista_rutas.html', c)
+
+
+
+@login_required
+@permission_required('facturacion.view_ruta')
+def ver_ruta(request, _id):
+
+	ruta = get_object_or_404(models.Ruta, pk=_id)
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	params = {'_id':_id}
+
+	ruta_edit = reverse('vEditarRuta', kwargs=params)
+
+	ruta_delete = reverse('vEliminarRuta', kwargs=params)
+
+	c = {'titulo':'Datos de la Ruta', 'seccion':'Facturación', 'empresa':empresa, 'ruta':ruta, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
+
+	return render(request, 'facturacion/ver_ruta.html', c)
+
+
+
+@login_required
+@permission_required('facturacion.add_ruta')
+def nueva_ruta(request):
+
+	if request.method == "GET":
+		
+		empresa = settings.NOMBRE_EMPRESA
+
+		form = forms.fRuta()
+
+		ruta = reverse('vNuevaRuta')
+
+		c = {'titulo':'Ingreso de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/form_template.html', c)
+
+	elif request.method == "POST":
+
+		form = forms.fRuta(request.POST)
+
+		if form.is_valid():
+			
+			ruta = form.save(commit=False)
+
+			ruta.save()
+
+			messages.success(request, "Los datos se registraron con éxito.")
+
+			return redirect('ver_ruta', {'_id':ruta.id})
+		
+
+
+
+@login_required
+@permission_required('facturacion.change_ruta')
+def editar_ruta(request, _id):
+
+	registro = get_object_or_404(models.Ruta, pk=_id)
+
+	if request.method == "GET":
+		
+		empresa = settings.NOMBRE_EMPRESA
+
+		form = forms.fRuta(registro)
+
+		ruta = reverse('vEditarRuta', kwargs={'_id':_id})
+
+		c = {'titulo':'Editar Datos de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/form_template.html', c)
+
+	elif request.method == "POST":
+
+		form = forms.fRuta(request.POST, instance=registro)
+
+		if form.is_valid():
+			
+			ruta = form.save(commit=False)
+
+			messages.success(request, "Los datos se actualizaron con éxito.")
+
+			return redirect('ver_ruta', {'_id':_id})
+
+
+
+
+@login_required
+@permission_required('facturacion.delete_ruta')
+def eliminar_ruta(request, _id):
+
+	ruta = get_object_or_404(models.Ruta, pk=_id)
+
+	ruta.delete()
+
+	messages.success(request, "El registro se eliminó con éxito.")
+
+	return redirect('lista_rutas')
+
 
 
 

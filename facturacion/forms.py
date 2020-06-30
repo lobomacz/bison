@@ -6,7 +6,21 @@ class fFactura(forms.ModelForm):
 	"""docstring for FacturaForm"""
 	class Meta:
 		model = models.Factura 
-		exclude = ['asiento', 'salida', 'anulada', 'impresiones', 'subtotal', 'iva', 'total', 'vendedor', 'cancelada', 'entregado']
+		exclude = [
+		'asiento', 
+		'salida', 
+		'anulada', 
+		'anulada_por',
+		'fecha_anulada',
+		'impresiones', 
+		'subtotal', 
+		'iva', 
+		'total', 
+		'vendedor', 
+		'cancelada', 
+		'entregada',
+		'entregada_por',
+		'fecha_entregada']
 		widgets = {
 			'id':forms.HiddenInput,
 			'fecha':forms.TextInput(attrs={'readonly':True})
@@ -68,25 +82,31 @@ class fCliente(forms.ModelForm):
 	class Meta:
 		model = models.Cliente
 		fields = '__all__'
+		widgets = {
+			'id':forms.HiddenInput
+		}
 
 
 class fVendedor(forms.ModelForm):
 	"""docstring for VendedorForm"""
 	class Meta:
 		model = models.Vendedor
-		fields = '__all__'
+		exclude = ['activo']
+		#fields = '__all__'
+		widgets = {
+			'id':forms.HiddenInput
+		}
 
-class fCamion(forms.ModelForm):
-
-	class Meta:
-		model = models.Camion
-		fields = '__all__'
 
 class fRuta(forms.ModelForm):
 
 	class Meta:
 		model = models.Ruta 
 		fields = '__all__'
+		widgets = {
+			'id':forms.HiddenInput
+		}
+
 
 
 class fOrdenRuta(forms.ModelForm):
@@ -94,26 +114,28 @@ class fOrdenRuta(forms.ModelForm):
 	class Meta:
 		model = models.OrdenRuta 
 		exclude = [
+			'digitador',
 			'entregado', 
 			'entregado_por',
 			'autorizado',
 			'autorizado_por',
+			'anulado',
+			'anulado_por',
 			'liquidado',
 			'liquidado_por',
-			'digitador',
 			'recibido_por',
 		]
 		widgets = {
 			'id':forms.HiddenInput
 		}
 
-class fEntregaOrdenRuta(forms.ModelForm):
+class fEditOrdenRuta(forms.ModelForm):
 
 	class Meta:
-		model = models.OrdenRuta
-		fields = ['id', 'recibido_por', 'observaciones']
+		fields = ['id', 'fecha', 'camion', 'vendedor', 'ruta', 'observaciones']
 		widgets = {
-			'id':forms.HiddenInput
+		'id':forms.HiddenInput,
+		'fecha':forms.TextInput(attrs={'readonly':True})
 		}
 		
 

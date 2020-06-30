@@ -5,16 +5,6 @@ from bison.facturacion.models import Vendedor
 
 # Create your models here.
 
-class Producto(models.Model):
-	"""Modelo para registro de productos"""
-	#codigo = models.CharField(max_length=50, primary_key=True)
-	nombre = models.CharField(max_length=100)
-	categoria = models.ForeignKey(Categoria)
-	unidad_base = models.ForeignKey(UnidadMedida)
-	costo_unit = models.DecimalField('Costo', max_digits=6, decimal_places=2)
-	precio_unit = models.DecimalField('Precio', max_digits=6, decimal_places=2)
-	minimo = models.DecimalField(max_digits=6, decimal_places=2)
-	maximo = models.DecimalField(max_digits=6, decimal_places=2)
 
 class Almacen(models.Model):
 	"""Modelo de datos para Almacenes"""
@@ -63,6 +53,7 @@ class DetalleSalida(models.Model):
 	costo_unit = models.DecimalField(max_digits=6, decimal_places=2)
 	total = models.DecimalField(max_digits=6, decimal_places=2)
 
+'''
 class OrdenSalida(models.Model):
 	"""Modelo de datos para OrdenSalidaMateriales"""
 	fecha = models.DateField()
@@ -112,4 +103,9 @@ class OrdenCarga(models.Model):
 			('autorizar_orden_carga', 'Autorizar Ordenes de Carga'),
 			('liqueidar_orden_carga', 'Liquidar Ordenes de Carga'),
 		]
+'''
 		
+
+
+		
+						

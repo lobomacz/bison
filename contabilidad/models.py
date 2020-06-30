@@ -1,5 +1,6 @@
 from django.db import models
 from django.urls import reverse
+from bison.core.models improt Empleado
 
 # Create your models here.
 class Cuenta(models.Model):
@@ -42,6 +43,7 @@ class Asiento(models.Model):
 	contabilizado = models.BooleanField(default=False)
 	fecha_contabilizado = models.DateTimeField(null=True)
 	anulado = models.BooleanField(default=False)
+	anulado_por = models.ForeignKey(Empleado, null=True)
 	fecha_anulado = models.DateTimeField(null=True)
 	observaciones = models.CharField(max_length=600)
 
@@ -102,8 +104,8 @@ class Periodo(models.Model):
 	ejercicio = models.ForeignKey(Ejercicio, on_delete=models.PROTECT, on_update=models.CASCADE)
 	nombre = models.CharField(max_length=15)
 	nombre_corto = models.CharField(max_length=3, min_length=3)
-	fecha_inicio = models.DateField('Fecha de Inicio')
-	fecha_final = models.DateField('Fecha Final')
+	fecha_inicio = models.DateField(verbose_name='Fecha de Inicio')
+	fecha_final = models.DateField(verbose_name='Fecha Final')
 	activo = models.BooleanField(default=False)
 	cerrado = models.BooleanField(default=False)
 

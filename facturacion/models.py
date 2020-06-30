@@ -1,8 +1,8 @@
 from django.db import models
 from django.urls import reverse
-from bison.core.models import Empleado, Unidad
-from bison.contabilidad.models import Asiento
-from bison.inventario.models import Salida, Producto
+from bison.core.models import Empleado, Unidad, Producto
+from bison.contabilidad.models import Cuenta, Asiento
+from bison.inventario.models import Salida
 
 # Create your models here.
 
@@ -15,16 +15,20 @@ class Factura(models.Model):
 	vendedor = models.ForeignKey('Vendedor', on_delete=models.SET_NULL, null=True)
 	asiento = models.ForeignKey(Asiento, on_delete=models.PROTECT, null=True)
 	salida = models.ForeignKey(Salida, on_delete=models.PROTECT, null=True)
-	tipo = models.CharField('Tipo de Factura', choices=[('cr', 'Credito'), ('ct', 'Contado')], max_length=2)
-	tipo_pago = models.CharField('Forma de Pago', choices=[('ef', 'Efectivo'), ('tr', 'Tarjeta'), ('ck', 'Cheque')])
-	cancelada = models.BooleanField()
-	entregada = models.BooleanField()
-	anulada = models.BooleanField()
-	impresiones = models.IntegerField(default=0)
+	tipo = models.CharField(verbose_name='tipo de factura', choices=[('cr', 'Credito'), ('ct', 'Contado')], max_length=2)
+	tipo_pago = models.CharField(verbose_name='forma de pago', choices=[('ef', 'Efectivo'), ('tr', 'Tarjeta'), ('ck', 'Cheque')])
 	descuento = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 	subtotal = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 	iva = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 	total = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
+	cancelada = models.BooleanField()
+	entregada = models.BooleanField()
+	fecha_entregada = models.DateTimeField()
+	entregada_por = models.ForeignKey(Empleado, null=True)
+	anulada = models.BooleanField()
+	anulada_por = models.ForeignKey(Empleado, null=True)
+	fecha_anulada = models.DateField()
+	impresiones = models.IntegerField(default=0)
 
 	class Meta:
 		ordering = ['no_documento', 'fecha']
@@ -41,12 +45,12 @@ class DetalleFactura(models.Model):
 	"""Modelo DetalleFactura asociado al modelo Factura"""
 	factura = models.ForeignKey(Factura, on_delete=models.CASCADE)
 	producto = models.ForeignKey(Producto, on_delete=models.PROTECT)
-	cantidad = models.DecimalField('Cant.', max_digits=6, decimal_places=2)
+	cantidad = models.DecimalField(max_digits=6, decimal_places=2)
 	unidad_medida = models.ForeignKey(Unidad, on_delete=PROTECT)
-	precio_unit = models.DecimalField('P. Unit.',max_digits=6, decimal_places=2, default=0.00)
+	precio_unit = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 	total = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
-	entregado = models.BooleanField(default=False)
-	fecha_entregado = models.DateField(null=True)
+	#entregado = models.BooleanField(default=False)
+	#fecha_entregado = models.DateField(null=True)
 
 	class Meta:
 		ordering = ['factura', 'item']
@@ -83,9 +87,9 @@ class DetalleProforma(models.Model):
 	"""Modelo DetalleFactura asociado al modelo Factura"""
 	proforma = models.ForeignKey(Proforma, on_delete=models.CASCADE)
 	producto = models.ForeignKey(Producto, on_delete=models.PROTECT)
-	cantidad = models.DecimalField('Cant.', max_digits=6, decimal_places=2)
+	cantidad = models.DecimalField(max_digits=6, decimal_places=2)
 	unidad_medida = models.ForeignKey(Unidad, on_delete=PROTECT)
-	precio_unit = models.DecimalField('P. Unit.',max_digits=6, decimal_places=2, default=0.00)
+	precio_unit = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 	total = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 
 	class Meta:
@@ -98,11 +102,11 @@ class DetalleProforma(models.Model):
 
 class Cliente(models.Model):
 	"""Modelo de datos para Clientes"""
-	id = models.CharField('Cedula/RUC', max_length=25, primary_key=True)
+	id = models.CharField(verbose_name='No. Identificación', max_length=25, primary_key=True)
 	nombre = models.CharField(max_length=50)
 	direccion = models.CharField(max_length=200, null=True)
 	telefono = models.CharField(max_length=9, null=True)
-	correo = models.EmailField('Email', null=True)
+	correo = models.EmailField(verbose_name='Email', null=True)
 
 	class Meta:
 		ordering = ['nombre', 'correo']
@@ -114,38 +118,34 @@ class Cliente(models.Model):
 
 		return self.nombre
 
+
 class Ruta(models.Model):
 	"""Modelo de datos para Ruta"""
 	descripcion = models.CharField(max_length=100)
+	cuenta = models.ForeignKey(Cuenta, on_delete=models.PROTECT)
 	especial = models.BooleanField(default=False)
 	habilitado = models.BooleanField()
 		
+
 
 class Vendedor(models.Model):
 	"""Modelo de datos para Vendedor"""
 	empleado = models.ForeignKey(Empleado, on_delete=models.CASCADE)
 	ruta = modeld.ForeignKey(Ruta, null=True)
-	activo = models.BooleanField()
-	aplica_descuentos = models.BooleanField()
+	activo = models.BooleanField(default=True)
+	aplica_descuentos = models.BooleanField(default=False)
+
+	class Meta:
+
+		permissions = [
+			('desactivar_venedor', 'Desactiva Vendedores')
+		]
 
 	def __str__(self):
 
 		return '{0} {1}'.format(self.empleado.nombre, self.empleado.apellido)
 
 
-class Camion(models.Model):
-	"""Modelo de datos para Camion"""
-	descripcion = models.CharField(max_length=45)
-	tonelaje = models.IntegerField(default=2)
-	anno = models.CharField(max_length=4, min_length=4)
-	seguro_hasta = models.DateField()
-	placa = models.CharField(max_length=10)
-	habilitado = models.BooleanField()
-
-	def __str__(self):
-
-		return '{0} {1} Placa: {2}'.format(self.descripcion, self.anno, self.placa)
-		
 
 class OrdenRuta(models.Model):
 	"""Modelo de datos para OrdenDeRuta"""
@@ -157,6 +157,7 @@ class OrdenRuta(models.Model):
 	autorizado = models.BooleanField(default=False)
 	autorizado_por = models.ForeignKey(Empleado, on_delete=models.PROTECT, null=True)
 	anulado = models.BooleanField(default=False)
+	anulado_por = models.ForeignKey(Empleado, null=True)
 	entregado = models.BooleanField(default=False)
 	entregado_por = models.ForeignKey(Empleado, on_delete=models.PROTECT, null=True)
 	recibido_por = models.ForeignKey(Empleado, on_delete=models.PROTECT, null=True)
@@ -168,6 +169,7 @@ class OrdenRuta(models.Model):
 		ordering = ['fecha', 'ruta']
 		permissions = [
 			('autorizar_ordenruta', 'Autoriza ordenes de ruta'),
+			('despachar_ordenruta', 'Despacha ordenes de ruta'),
 			('anular_ordenruta', 'Anular ordenes de ruta'),
 			('liquidar_ordenruta', 'Liquidar ordenes de ruta'),
 		]
@@ -178,11 +180,9 @@ class DetalleOrdenRuta(models.Model):
 	producto = models.ForeignKey(Producto, on_delete=models.PROTECT)
 	unidad_medida = models.ForeignKey(Unidad, on_delete=models.PROTECT)
 	cantidad_entregada = models.DecimalField(max_digits=4, decimal_places=2)
-	costo_total = models.DecimalField('Costo Total', max_digits=6, decimal_places=2, default=0.00)
+	costo_total = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 	cantidad_vendida = models.DecimalField(max_digits=4, decimal_places=2, default=0.00)
-	costo_vendido = models.DecimalField('Venta', max_digits=6, decimal_places=2, default=0.00)
+	costo_vendido = models.DecimalField(verbose_name='venta', max_digits=6, decimal_places=2, default=0.00)
 	cantidad_recibida = models.DecimalField(max_digits=4, decimal_places=2, default=0.00)
-	costo_faltante = models.DecimalField('Costo Faltante', max_digits=6, decimal_places=2, null=True)
+	costo_faltante = models.DecimalField(max_digits=6, decimal_places=2, null=True)
 
-		
-						

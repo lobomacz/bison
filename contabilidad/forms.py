@@ -33,6 +33,7 @@ class AsientoForm(forms.ModelForm):
 		 'contabilizado',
 		 'fecha_contabilizado',
 		 'anulado',
+		 'anulado_por',
 		 'fecha_anulado',
 		 ]
 		widgets = {

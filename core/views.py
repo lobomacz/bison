@@ -16,14 +16,10 @@ import logging
 # Create your views here.
 
 
-def getNombreEmpresa():
-	return settings.NOMBRE_EMPRESA
-
-
 @login_required
 def index(request):
 
-	empresa = getNombreEmpresa()
+	empresa = settings.NOMBRE_EMPRESA
 
 	c = {
 	'empresa':empresa, 
@@ -40,6 +36,7 @@ def bison_login(request):
 	if request.method == "GET":
 		
 		form = LoginForm()
+
 		return render(request, 'core/login.html', {'form':form})
 	
 	else:
@@ -68,11 +65,12 @@ def bison_logout(request):
 	logout(request)
 	return redirect('bison_login')
 
-
+'''
 @login_required
 def error(request):
 
 	return render(request, 'core/error.html')
+'''
 
 
 @login_required
@@ -95,7 +93,7 @@ def lista_empleados(request, page, todos=False):
 
 		empleados = paginador.get_page(page)
 
-	empresa = getNombreEmpresa()
+	empresa = settings.NOMBRE_EMPRESA
 
 	c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'listado de empleados', 'empleados':empleados, 'todos':todos}
 	
@@ -108,10 +106,15 @@ def lista_empleados(request, page, todos=False):
 def ver_empleado(request, _id):
 		
 	empleado = get_object_or_404(models.Empleado, pk=_id)
-	empresa = getNombreEmpresa()
+
+	empresa = settings.NOMBRE_EMPRESA
+
 	ruta_delete = reverse('vEliminarEmpleado', {'_id':empleado.cedula})
+
 	ruta_edit = reverse('vEditarEmpleado', {'_id':empleado.cedula})
+
 	c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'datos de empleado', 'empleado':empleado, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
+	
 	return render(request, 'core/ver_empleado.html', c)
 
 
@@ -119,14 +122,14 @@ def ver_empleado(request, _id):
 @login_required
 @permission_required('core.add_empleado')
 def nuevo_empleado(request):
-
-	ruta = reverse('vNuevoEmpleado')
 	
 	if request.method == "GET":
 		
 		form = forms.EmpleadoForm()
 
-		empresa = getNombreEmpresa()
+		ruta = reverse('vNuevoEmpleado')
+
+		empresa = settings.NOMBRE_EMPRESA
 
 		c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'nuevo empleado', 'form':form, 'ruta':ruta}
 
@@ -154,7 +157,7 @@ def nuevo_empleado(request):
 
 				logging.error(e)
 
-				return redirect(reverse('vError'))
+				return redirect('lista_empleados')
 			
 			messages.success(request,"Empleado ingresado con éxito")
 
@@ -166,14 +169,14 @@ def nuevo_empleado(request):
 @login_required
 @permission_required(('core.add_empleado', 'core.add_usuario', 'core.asignar_usuario'))
 def nuevo_empleado_usuario(request):
-
-	ruta = reverse('vNuevoEmpleadoUsuario')
 	
 	if request.method == "GET":
 		
 		form = forms.EmpleadoUsuarioForm()
 
-		empresa = getNombreEmpresa()
+		ruta = reverse('vNuevoEmpleadoUsuario')
+
+		empresa = settings.NOMBRE_EMPRESA
 
 		c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'registro de empleado con usuario', 'form':form, 'ruta':ruta}
 
@@ -188,7 +191,9 @@ def nuevo_empleado_usuario(request):
 		if form.is_valid(): 
 		
 			datos = form.cleaned_data #request.POST
+
 			user = None
+
 			empleado = None
 
 			try:
@@ -228,7 +233,7 @@ def editar_empleado(request, _id):
 
 		form = forms.EditEmpleadoForm(empleado)
 
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		c = {'empresa':empresa, 'seccion':'Empleados', 'titulo':'edición de datos de empleado', 'form':form, 'ruta':ruta}
 
@@ -299,7 +304,9 @@ def desactivar_empleado(request, _id):
 	if request.method == "POST":
 
 		empleado = models.Empleado.objects.get(pk=_id)
+
 		usuario = empleado.usuario
+
 		empleado.activo = False
 
 		try:
@@ -327,7 +334,7 @@ def desactivar_empleado(request, _id):
 @permission_required('view.user')
 def lista_usuarios(request):
 
-	empresa = getNombreEmpresa()
+	empresa = settings.NOMBRE_EMPRESA
 
 	usuarios = User.objects.filter(is_superuser=False)
 
@@ -342,7 +349,7 @@ def nuevo_usuario(request):
 
 	if request.method == 'GET':
 		
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		form = forms.UsuarioForm()
 
@@ -388,7 +395,7 @@ def editar_usuario(request, _id):
 
 	if request.method == 'GET':
 		
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		form = forms.UserForm(usuario)
 
@@ -432,7 +439,7 @@ def asignar_usuario(request, _id):
 		
 	if request.method == "GET":
 		
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		form = forms.AsignaUsuarioForm(initial={'id_empleado':empleado.cedula})
 
@@ -440,7 +447,7 @@ def asignar_usuario(request, _id):
 
 		c = {'empresa':empresa, 'titulo':'Asignación de Usuario', 'seccion':'Empleados', 'empleado':empleado, 'ruta':ruta, 'form':form}
 		
-		return render(request, 'core/forms/asignar_usuario.html', c)
+		return render(request, 'core/forms/form_template.html', c)
 
 	elif request.method == "POST":
 
@@ -480,7 +487,7 @@ def password_user_change(request):
 
 	if request.method == "GET":
 
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		empleado = user.empleado
 
@@ -524,7 +531,7 @@ def password_user_change(request):
 @permission_required('change_user')
 def desactivar_usuario(request, _id):
 
-	user = None
+	#user = None
 
 	if request.method == "POST": 
 
@@ -552,9 +559,9 @@ def desactivar_usuario(request, _id):
 
 			else:
 
-				messages.warning(request, 'El usuario no ha sido asignado')
+				messages.error(request, 'El usuario no ha sido asignado')
 
-				return redirect('index')
+				return redirect('lista_usuarios')
 
 		
 
@@ -565,7 +572,7 @@ def desactivar_usuario(request, _id):
 @permission_required('core.view_categoria')
 def lista_categorias(request, page):
 
-	empresa = getNombreEmpresa()
+	empresa = settings.NOMBRE_EMPRESA
 
 	limite = settings.LIMITE_FILAS
 
@@ -590,7 +597,7 @@ def nueva_categoria(request):
 
 	if request.method == "GET":
 
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		formset = CategoriaFormSet()
 
@@ -636,7 +643,7 @@ def editar_categoria(request, _id):
 
 		form = forms.EditCategoriaForm(categoria)
 
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		ruta = reverse('vEditarCategoria', kwargs={'_id':_id})
 
@@ -689,7 +696,7 @@ def eliminar_categoria(request, _id):
 @permission_required('core.view_unidad')
 def lista_medidas(request, page):
 
-	empresa = getNombreEmpresa()
+	empresa = settings.NOMBRE_EMPRESA
 
 	limite = settings.LIMITE_FILAS
 
@@ -712,7 +719,7 @@ def nueva_medida(request):
 
 	if request.method == "GET":
 
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		formset = UnidadFormSet()
 
@@ -759,7 +766,7 @@ def editar_medida(request, _id):
 
 		form = forms.EditUnidadForm(unidad)
 
-		empresa = getNombreEmpresa()
+		empresa = settings.NOMBRE_EMPRESA
 
 		ruta = reverse('vEditarMedida', kwargs={'_id':_id})
 
@@ -805,6 +812,128 @@ def eliminar_medida(request, _id):
 		unidad.delete()
 
 		return redirect('lista_medidas', {'page':1})
+
+
+
+@login_required
+@permission_required('core.view_camion')
+def lista_camiones(request):
+
+	camiones = models.Camion.objects.all()
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	c = {'titulo':'Lista de Camiones', 'seccion':'Camiones' 'empresa':empresa, 'camiones':camiones}
+
+	return render(request, 'core/lista_camiones.html', c)
+
+
+
+@login_required
+@permission_required('core.view_camion')
+def ver_camion(request, _id):
+
+	camion = get_object_or_404(models.Camion, pk=_id)
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	params = {'_id':_id}
+
+	ruta_edit = reverse('vEditarCamion', kwargs=params)
+
+	ruta_delete = reverse('vEliminarCamion', kwargs=params)
+
+	c = {'titulo':'Datos de Camión', 'seccion':'Camiones', 'empresa':empresa, 'camion':camion, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
+
+	return render(request, 'ver_camion.html', c)
+
+
+@login_required
+@permission_required('core.add_camion')
+def nuevo_camion(request):
+
+	if request.method == "GET":
+		
+		empresa = settings.NOMBRE_EMPRESA
+
+		form = forms.fCamion()
+
+		ruta = reverse('vNuevoCamion')
+
+		c = {'titulo':'Ingreso de Camion', 'seccion':'Camiones', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/form_template.html', c)
+
+	elif request.method == "POST":
+		
+		form = forms.fCamion(request.POST)
+
+		if form.is_valid():
+			
+			camion = form.save(commit=False)
+
+			camion.save()
+
+			messages.success(request, "Los datos se registraron con éxito.")
+
+			return redirect('ver_camion', {'_id':camion.id})
+
+
+@login_required
+@permission_required('core.change_camion')
+def editar_camion(request, _id):
+
+	camion = get_object_or_404(models.Camion, pk=_id)
+
+	if request.method == "GET":
+		
+		empresa = settings.NOMBRE_EMPRESA
+
+		form = forms.fCamion(camion)
+
+		ruta = reverse('vEditarCamion', kwargs={'_id':_id})
+
+		c = {'titulo':'Editar Datos de Camion', 'seccion':'Camiones', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/form_template.html', c)
+
+	elif request.method == "POST":
+		
+		form = forms.fCamion(request.POST, instance=camion)
+
+		if form.is_valid():
+			
+			form.save()
+
+			messages.success(request, "Los datos se actualizaron con éxito.")
+
+			return redirect('ver_camion', {'_id':_id})
+
+
+
+@login_required
+@permission_required('core.delete_camion')
+def eliminar_camion(request, _id):
+
+	if request.method == "POST":
+		
+		camion = get_object_or_404(models.Camion, pk=_id)
+
+		camion.delete()
+
+		messages.success(request, "El registro se eliminó con éxito.")
+
+		return redirect('lista_camiones')
+
+
+
+
+
+
 
 
 

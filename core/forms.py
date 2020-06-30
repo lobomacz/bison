@@ -137,5 +137,11 @@ class EditUnidadForm(forms.ModelForm):
 		}
 		
 		
+class fCamion(forms.ModelForm):
+
+	class Meta:
+		model = models.Camion
+		#fields = '__all__'
+		exclude = ['id']
 		
 		
