@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.forms import formset_factory, modelformset_factory, inlineformset_factory
 from django.contrib import messages
 from django.contrib.auth import login_required, permission_required
+from diango.db import transaction
 from django.db.models import Q, Sum
 from bison.core.models import Empleado
 from . import models, forms
@@ -14,10 +15,17 @@ import datetime, calendar, logging
 
 
 @login_required
-@permission_required(['contabilidad.view_asiento', 'contabilidad.view_cuenta', 'contabilidad.view_periodo'])
 def index(request):
+	if not request.user.groups.filter(name='Contabilidad').count() > 0:
+
+		messages.warning(request, "No tiene acceso a esta sección.")
+
+		return redirect(reverse('core:bisonIndex'))
+
 	empresa = getNombreEmpresa()
+
 	c = {'titulo':'Panel de Contabilidad', 'seccion':'Contabilidad', 'empresa':empresa}
+	
 	return render(request, 'contabilidad/indice.html', c)
 
 
@@ -426,19 +434,30 @@ def detalle_asiento(request, _id, tipo=1):
 
 			else:
 
-				messages.success(request, 'Los datos se registraron con éxito.')
+				try:
+					
+					with transaction.atomic():
+						
+						formset.save()
+
+						messages.success(request, 'Los datos se registraron con éxito.')
+
+				except DatabaseError:
+
+					messages.error(request, "Ocurrió un problema al registrar los datos.")
 				
-				formset.save()
 
 				if tipo==1:
 					
 					return redirect('ver_asiento', {'_id':_id})
 
-				elif tipo==2:
+				elif tipo==2 or tipo==3:
 
-					factura = asiento.factura_set.first()
+					factura = asiento.factura
 
-					ruta = reverse('facturacion:vCancelarFactura', kwargs={'_id':factura.id})
+					params = {'_id':factura.id}
+
+					ruta = reverse('facturacion:vCancelarFactura', kwargs=params) if tipo==2 else reverse('facturacion:vVerFactura', kwargs=params)
 
 					return redirect(ruta) #redirect(reverse('vCancelarFactura', kwargs={'_id':factura.id}))
 
@@ -902,6 +921,7 @@ def contabilizar_periodo(request, _id):
 
 
 
+'''
 @login_required
 @permission_required(['contabilidad.view_asiento','contabilidad.reporte_periodo'])
 def reportes_rango(request, slug, inicio, final):
@@ -916,7 +936,6 @@ def reportes_periodo(request, slug, _id):
 
 
 
-'''
 @login_required
 @permission_required('contabilidad.change_periodo')
 def cerrar_periodo(request, _id):

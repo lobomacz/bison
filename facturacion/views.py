@@ -5,9 +5,10 @@ from django.conf import settings
 from django.forms import formset_factory, modelformset_factory, inlineformset_factory
 from django.contrib import messages
 from django.contrib.auth import login_required, permission_required
-from django.db.models imort Q, Sum
-from bison.core.models import Empleado, Unidad, Producto
-from bison.contabilidad.models import Cuenta, Asiento, DetalleAsiento
+from django.db import transaction
+from django.db.models import Q, Sum
+from bison.core.models import Empleado
+from bison.contabilidad.models import Asiento
 #from bison.inventario.models import Producto
 from . import models, forms
 import datetime, calendar, logging
@@ -19,8 +20,13 @@ import datetime, calendar, logging
 # La página inicial de la sección llevará a las páginas de facturas y ordenes de ruta
 
 @login_required
-@permission_required(['facturacion.view_ordenruta', 'facturacion.view_factura'])
 def index(request):
+
+	if not request.user.groups.filter(name='Facturacion').count() > 0:
+		
+		messages.warning(request, "No tiene acceso a esta sección.")
+
+		return redirect(reverse('core:bisonIndex'))
 
 	empresa = settings.NOMBRE_EMPRESA
 
@@ -106,11 +112,11 @@ def lista_proformas(request, page=1, inicio=None, final=None):
 
 	if inicio == None and final == None:
 		
-		proformas = get_list_or_404(models.Proforma, anulado=False, fecha__lte=expire.strftime('%Y-%m-%d'))
+		proformas = models.Proforma.objects.filter(anulado=False, fecha__lte=expire.strftime('%Y-%m-%d'))
 
 	else:
 
-		proformas = get_list_or_404(models.Proforma, fecha__gte=inicio, fecha__lte=final)
+		proformas = models.Proforma.objects.filter(fecha__gte=inicio, fecha__lte=final)
 
 		c['inicio'] = inicio
 		c['final'] = final
@@ -391,7 +397,7 @@ def ver_factura(request, _id):
 
 @login_required
 @permission_required(['facturacion.change_factura', 'facturacion.change_detallefactura', 'facturacion.add_detallefactura'])
-def detalle_factura(request, _id):
+def detalle_factura(request, _id, _ido=None):
 
 	factura = get_object_or_404(models.Factura, pk=_id)
 
@@ -419,37 +425,61 @@ def detalle_factura(request, _id):
 
 		if formset.is_valid():
 
-			subtotal = 0.00
+			try:
 
-			for form in formset.forms:
+				with transaction.atomic():
 
-				detalle = form.save(commit=False)
+					ordenruta = get_object_or_404(models.OrdenRuta, pk=_ido) if not _ido == None else None
 
-				if not detalle.precio_unit > 0.00:
+					subtotal = 0.00
 
-					detalle.precio_unit = detalle.producto.precio_unit
+					for form in formset.forms:
 
-				# Mejorar con la conversión de unidad de medida para calcular el total.
+						detalle = form.save(commit=False)
 
-				detalle.total = detalle.cantidad * detalle.precio_unit
+						if not detalle.precio_unit > 0.00:
 
-				subtotal += detalle.total
+							detalle.precio_unit = detalle.producto.precio_unit
 
-				detalle.save()
+						# Mejorar con la conversión de unidad de medida para calcular el total.
 
-			monto_iva = settings.MONTO_IVA
+						detalle.total = detalle.cantidad * detalle.precio_unit
 
-			factura.subtotal = subtotal
+						subtotal += detalle.total
 
-			factura.iva = factura.subtotal * monto_iva
+						if ordenruta != None:
+							
+							detalleOrden = ordenruta.detalleordenruta_set.filter(producto_id=detalle.producto.id)
 
-			factura.total = factura.iva + factura.subtotal
+							detalleOrden.cantidad_vendida += detalle.cantidad
 
-			factura.save()
+							detalleOrden.costo_vendido += detalle.total
 
-			messages.success(request, 'Los datos se registraron con éxito.')
+							detalleOrden.save()
 
-			return redirect('ver_factura', {'_id':_id})
+						detalle.save()
+
+					monto_iva = settings.MONTO_IVA
+
+					factura.subtotal = subtotal
+
+					factura.iva = factura.subtotal * monto_iva
+
+					factura.total = factura.iva + factura.subtotal
+
+					factura.save()
+
+					messages.success(request, 'Los datos se registraron con éxito.')
+
+					return redirect('ver_factura', {'_id':_id})
+
+			except DatabaseError:
+
+				messages.error("Ocurrió un problema al ingresar los datos. Intentelo de nuevo.")
+
+				ruta = reverse('vDetalleFacturaOR', kwargs={'_id':_id, '_ido':_ido}) if _ido != None else reverse('vDetalleFactura', kwargs={'_id':_id})
+
+				return redirect(ruta)
 
 
 
@@ -584,6 +614,9 @@ def asiento_factura(request, _id):
 '''
 
 
+# TODO: Como proceder para registrar el asiento al cancelar factura de contado
+# y al ingresar factura al crédito?
+
 
 @login_required
 @permission_required('facturacion.cancelar_factura')
@@ -613,17 +646,22 @@ def cancelar_factura(request, _id):
 
 				asiento.observaciones = "Documento No. {}".format(factura.no_documento)
 
-				asiento.save()
+				with transaction.atomic():
 
-				factura.asiento = asiento
+					asiento.save()
 
-				factura.save()
+					factura.asiento = asiento
+
+					factura.save()
+
+			elif factura.asiento != None and factura.tipo == 'cr':
+				pass
 
 			else:
 
 				asiento = factura.asiento
 
-			messages.info(request, "Por favor ingrese el detalle del asiento contable.")
+			messages.info(request, "Ingrese el detalle del asiento contable.")
 
 			ruta = reverse('contabilidad:vDetalleAsiento', kwargs={'_id':asiento.id, 'tipo':2})
 
@@ -638,6 +676,46 @@ def cancelar_factura(request, _id):
 			messages.success(request, "Factura cancelada.")
 
 			return redirect('ver_factura', {'_id':_id})
+
+
+
+@login_required
+@permission_required('facturacion.asiento_factura')
+def asiento_factura(request, _id):
+	
+	factura = get_object_or_404(models.Factura, pk=_id)
+
+	if factura.asiento == None:
+
+		fecha = datetime.date.today()
+
+		descripcion = "Venta de producto al contado" if factura.tipo == 'ct' else "Venta de producto al crédito"
+
+		asiento = Asiento()
+
+		asiento.fecha = fecha 
+
+		asiento.descripcion = descripcion
+
+		asiento.referencia = "Factura No.{}".format(factura.id)
+
+		asiento.observaciones = "Documento No. {}".format(factura.no_documento)
+
+		with transaction.atomic():
+
+			asiento.save()
+
+			factura.asiento = asiento
+
+			factura.save()
+
+	messages.info(request, "Ingrese el detalle del asiento contable.")
+
+	ruta = reverse('contabilidad:vDetalleAsiento', kwargs={'_id':factura.asiento.id, 'tipo':3})
+
+	return redirect(ruta)
+
+
 
 
 @login_required
@@ -694,7 +772,7 @@ def clientes(request, page=1):
 
 	if request.method == "GET":
 	
-		clientes = get_list_or_404(models.Cliente)
+		clientes = models.Cliente.objects.all() #get_list_or_404(models.Cliente)
 
 		limite = settings.LIMITE_FILAS
 
@@ -807,7 +885,7 @@ def lista_ordenes_ruta(request, page=1):
 
 	limite = settings.LIMITE_FILAS
 	
-	ordenes = get_list_or_404(models.OrdenRuta, liquidado=False, anulado=False)
+	ordenes = models.OrdenRuta.objects.filter(liquidado=False, anulado=False)
 
 	if ordenes.count() > limite:
 		
@@ -1028,6 +1106,66 @@ def autorizar_orden_ruta(request, _id):
 
 		return redirect('ver_orden_ruta', {'_id':_id})
 
+
+
+@login_required
+@permission_required('facturacion.facturar_ordenruta')
+def facturar_or_detalle(request, _id):
+	pass
+
+
+
+@login_required
+@permission_required('facturacion.facturar_ordenruta')
+def facturar_orden_ruta(request, _id):
+
+	ordenruta = get_object_or_404(models.OrdenRuta, pk=_id)
+
+	if request.method == 'GET':
+
+		vendedor = ordenruta.vendedor
+
+		form = forms.fFacturaOrdenRuta(initial={
+				'vendedor':vendedor.empleado,
+			})
+
+		ruta = reverse('vFacturarOrdenRuta', kwargs={'_id':_id})
+
+		empresa = settings.NOMBRE_EMPRESA
+
+		c = {'titulo':'Factura de Orden de Ruta', 'seccion':'Ordenes de Ruta', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+		messages.info(request, "")
+
+		return render(request, 'core/forms/form_template.html', c)
+
+	elif request.method == 'POST':
+
+		form = forms.fFacturaOrdenRuta(request.POST)
+
+		if form.is_valid():
+			
+			datosOrden = form.cleaned_data
+
+			cliente = models.Cliente.objects.get(id=datosOrden.cliente)
+
+			factura = models.Factura()
+
+			factura.fecha = datosOrden['fecha']
+			factura.cliente = cliente
+			factura.no_documento = datosOrden['no_documento']
+			factura.vendedor = ordenruta.vendedor
+			factura.tipo = datosOrden['tipo']
+			factura.tipo_pago = datosOrden['tipo_pago']
+			factura.descuento = datosOrden['descuento']
+
+			factura.save()
+
+			messages.info(request, "A continuación, ingrese el detalle de la factura.")
+
+			return redirect('detalle_factura', {'_id':factura.id, '_ido':_id})
+
+
 	
 
 
@@ -1086,7 +1224,7 @@ def lista_vendedores(request, page=1):
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	vendedores = get_list_or_404(models.Vendedor)
+	vendedores = models.Vendedor.objects.all() #get_list_or_404(models.Vendedor)
 
 	limite = settings.LIMITE_FILAS
 
@@ -1234,7 +1372,7 @@ def desactivar_vendedor(request, _id):
 @permission_required('facturacion.view_ruta')
 def lista_rutas(request):
 
-	rutas = get_list_or_404(models.Ruta)
+	rutas = models.Ruta.objects.all() #get_list_or_404(models.Ruta)
 
 	empresa = settings.NOMBRE_EMPRESA
 
@@ -1347,7 +1485,7 @@ def eliminar_ruta(request, _id):
 	return redirect('lista_rutas')
 
 
-
+'''
 
 @login_required
 def error(request):
@@ -1355,7 +1493,7 @@ def error(request):
 	return render(request, 'core/error.html')
 
 
-
+'''
 
 
 

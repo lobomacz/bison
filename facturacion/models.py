@@ -2,7 +2,7 @@ from django.db import models
 from django.urls import reverse
 from bison.core.models import Empleado, Unidad, Producto
 from bison.contabilidad.models import Cuenta, Asiento
-from bison.inventario.models import Salida
+from bison.inventario.models import Salida, Almacen
 
 # Create your models here.
 
@@ -10,31 +10,33 @@ from bison.inventario.models import Salida
 class Factura(models.Model):
 	"""Modelo para Facturas"""
 	fecha = models.DateField()
-	no_documento = models.CharField(max_length=10, null=True)
-	cliente = models.ForeignKey('Cliente', on_delete=models.SET_NULL, null=True)
-	vendedor = models.ForeignKey('Vendedor', on_delete=models.SET_NULL, null=True)
-	asiento = models.ForeignKey(Asiento, on_delete=models.PROTECT, null=True)
-	salida = models.ForeignKey(Salida, on_delete=models.PROTECT, null=True)
+	no_documento = models.CharField(max_length=10)
+	cliente = models.ForeignKey('Cliente', on_delete=models.SET_NULL)
+	vendedor = models.ForeignKey('Vendedor', on_delete=models.SET_NULL)
+	asiento = models.OneToOneField(Asiento, on_delete=models.PROTECT, null=True)
+	salida = models.OneToOneField(Salida, on_delete=models.PROTECT, null=True)
 	tipo = models.CharField(verbose_name='tipo de factura', choices=[('cr', 'Credito'), ('ct', 'Contado')], max_length=2)
-	tipo_pago = models.CharField(verbose_name='forma de pago', choices=[('ef', 'Efectivo'), ('tr', 'Tarjeta'), ('ck', 'Cheque')])
+	tipo_pago = models.CharField(verbose_name='forma de pago', choices=[('ef', 'Efectivo'), ('tr', 'Tarjeta'), ('ck', 'Cheque')], max_length=2)
 	descuento = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 	subtotal = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 	iva = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
 	total = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
-	cancelada = models.BooleanField()
-	entregada = models.BooleanField()
-	fecha_entregada = models.DateTimeField()
+	cancelada = models.BooleanField(default=False)
+	entregada = models.BooleanField(default=False)
+	fecha_entregada = models.DateTimeField(null=True)
 	entregada_por = models.ForeignKey(Empleado, null=True)
-	anulada = models.BooleanField()
+	anulada = models.BooleanField(default=False)
 	anulada_por = models.ForeignKey(Empleado, null=True)
-	fecha_anulada = models.DateField()
+	fecha_anulada = models.DateField(null=True)
 	impresiones = models.IntegerField(default=0)
+	observaciones = models.CharField(max_length=250, null=True)
 
 	class Meta:
 		ordering = ['no_documento', 'fecha']
 		permissions = [
 			('anular_factura', 'Anular facturas'),
 			('cancelar_factura', 'Cancelar facturas'),
+			('asiento_factura', 'Asiento de facturas'),
 		]
 		indexes = [
 			models.Index(fields=['no_documento', 'tipo', 'vendedor'])
@@ -122,9 +124,12 @@ class Cliente(models.Model):
 class Ruta(models.Model):
 	"""Modelo de datos para Ruta"""
 	descripcion = models.CharField(max_length=100)
-	cuenta = models.ForeignKey(Cuenta, on_delete=models.PROTECT)
+	almacen = models.ForeignKey(Almacen, on_delete=models.PROTECT)
 	especial = models.BooleanField(default=False)
-	habilitado = models.BooleanField()
+	habilitado = models.BooleanField(default=True)
+
+	def __str__(self):
+		return self.descripcion
 		
 
 
@@ -171,6 +176,7 @@ class OrdenRuta(models.Model):
 			('autorizar_ordenruta', 'Autoriza ordenes de ruta'),
 			('despachar_ordenruta', 'Despacha ordenes de ruta'),
 			('anular_ordenruta', 'Anular ordenes de ruta'),
+			('facturar_ordenruta', 'Facturar ordenes de ruta'),
 			('liquidar_ordenruta', 'Liquidar ordenes de ruta'),
 		]
 

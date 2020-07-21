@@ -58,14 +58,23 @@ class Categoria(models.Model):
 
 class Producto(models.Model):
 	"""Modelo para registro de productos"""
-	#codigo = models.CharField(max_length=50, primary_key=True)
-	nombre = models.CharField(max_length=100)
+	codigo = models.CharField(max_length=50, unique=True)
+	nombre = models.CharField(max_length=200)
 	categoria = models.ForeignKey(Categoria)
 	unidad_base = models.ForeignKey(UnidadMedida)
 	costo_unit = models.DecimalField('Costo', max_digits=6, decimal_places=2)
 	precio_unit = models.DecimalField('Precio', max_digits=6, decimal_places=2)
 	minimo = models.DecimalField(max_digits=6, decimal_places=2)
 	maximo = models.DecimalField(max_digits=6, decimal_places=2)
+	existencia = models.DecimalField(max_digits=6, decimal_places=2)
+
+	class Meta:
+		ordering = ['categoria','nombre']
+
+
+	def __str__(self):
+
+		return self.nombre
 
 
 

@@ -120,6 +120,14 @@ class EditCategoriaForm(forms.ModelForm):
 		widgets = {'id':forms.HiddenInput}
 
 
+class fProducto(forms.ModelForm):
+	"""Formulario de Producto"""
+	class Meta:
+		model = models.Producto
+		fields = '__all__'
+		widgets = {'id':forms.HiddenInput}
+
+
 class UnidadForm(forms.ModelForm):
 	"""Formulario para UnidadMedida"""
 	class Meta:

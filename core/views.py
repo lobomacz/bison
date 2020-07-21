@@ -694,17 +694,19 @@ def eliminar_categoria(request, _id):
 
 @login_required
 @permission_required('core.view_unidad')
-def lista_medidas(request, page):
+def lista_medidas(request, page=1):
 
 	empresa = settings.NOMBRE_EMPRESA
 
 	limite = settings.LIMITE_FILAS
 
-	unidades = get_list_or_404(models.Unidad)
+	unidades = models.Unidad.objects.all() #get_list_or_404(models.Unidad)
 
-	paginador = Paginator(unidades, limite)
+	if unidades.count() > limite:
 
-	unidades = paginador.get_page(page)
+		paginador = Paginator(unidades, limite)
+
+		unidades = paginador.get_page(page)
 
 	c = {'titulo':'Maestro de Unidad de Medida', 'seccion':'Unidades de Medida', 'empresa':empresa, 'unidades':unidades}
 	
@@ -813,6 +815,126 @@ def eliminar_medida(request, _id):
 
 		return redirect('lista_medidas', {'page':1})
 
+
+@login_required
+@permission_required('core.view_producto')
+def lista_productos(request, page=1):
+
+	limite = settings.LIMITE_FILAS
+
+	productos = models.Producto.objects.all()
+
+	if productos.count() > limite:
+		
+		paginador = Paginator(productos, limite)
+
+		productos = paginador.get_page(page)
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	c = {'titulo':'Lista de Productos', 'seccion':'Productos', 'empresa':empresa, 'productos':productos, 'page':page}
+
+	return render(request, 'core/lista_productos.html', c)
+
+
+@login_required
+@permission_required('core.view_producto')
+def ver_producto(request, _id):
+
+	producto = get_object_or_404(models.Producto, pk=_id)
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	params = {'_id':_id}
+
+	ruta_edit = reverse('vEditarProducto', kwargs=params)
+
+	ruta_delete = reverse('vEliminarProducto', kwargs=params)
+
+	c = {'titulo':'Datos del Producto', 'seccion':'Productos', 'empresa':empresa,}
+
+
+
+@login_required
+@permission_required('core.add_producto')
+def nuevo_producto(request):
+
+	if request.method == "GET":
+
+		empresa = settings.NOMBRE_EMPRESA
+
+		form = forms.fProducto()
+
+		ruta = reverse('vNuevoProducto')
+
+		c = {'titulo':'Registro de Producto', 'seccion':'Productos', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/form_template.html', c)
+
+	elif request.method == "POST":
+		
+		form = forms.fProducto(request.POST)
+
+		if form.is_valid():
+
+			producto = form.save(commit=False)
+
+			producto.save()
+
+			messages.success(request, "El producto se registró con éxito.")
+
+			return redirect('ver_producto', {'_id':producto.id})
+
+
+
+@login_required
+@permission_required('core.change_producto')
+def editar_producto(request, _id):
+	
+	producto = get_object_or_404(models.Producto, pk=_id)
+
+	if request.method == "GET":
+		
+		empresa = settings.NOMBRE_EMPRESA
+
+		ruta = reverse('vEditarProducto', kwargs={'_id':_id})
+
+		form = forms.fProducto(producto)
+
+		c = {'titulo':'Editar datos de Producto', 'seccion':'Productos', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/form_template.html', c)
+
+	elif request.method == "POST":
+		
+		form = forms.fProducto(request.POST, instance=producto)
+
+		if form.is_valid():
+			
+			form.save()
+
+			messages.success(request, "Los datos se actualizaron con éxito.")
+
+			return redirect('ver_producto', {'_id':_id})
+
+
+
+@login_required
+@permission_required('core.delete_producto')
+def eliminar_producto(request, _id):
+
+	producto = get_object_or_404(models.Producto, pk=_id)
+
+	producto.delete()
+
+	messages.success(request, "El registro ha sido eliminado.")
+
+	return redirect('lista_productos')
+	
 
 
 @login_required

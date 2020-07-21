@@ -1,6 +1,8 @@
 from django import forms
-from django.core.validators import RegexValidator
 from . import models
+import datetime
+
+CLIENTE_CHOICES = [(cliente.id,cliente.nombre) for cliente in models.Cliente.objects.all()]
 
 class fFactura(forms.ModelForm):
 	"""docstring for FacturaForm"""
@@ -132,6 +134,7 @@ class fOrdenRuta(forms.ModelForm):
 class fEditOrdenRuta(forms.ModelForm):
 
 	class Meta:
+		model = models.OrdenRuta
 		fields = ['id', 'fecha', 'camion', 'vendedor', 'ruta', 'observaciones']
 		widgets = {
 		'id':forms.HiddenInput,
@@ -157,6 +160,53 @@ class fDetalleOrdenRuta(forms.ModelForm):
 		labels = {
 			'cantidad_entregada':'Cantidad'
 		}
+
+
+
+class fFacturaOrdenRuta(forms.Form):
+
+	fecha = forms.DateField(label='Fecha', initial=datetime.date.today())
+	no_documento = forms.CharField(max_length=15, label='No. Documento')
+	cliente = forms.ChoiceField(label='Cliente', choices=CLIENTE_CHOICES)
+	vendedor = forms.CharField(label='Vendedor', widget=forms.TextInput(attrs={'readonly':True}), max_length=45)
+	tipo = forms.CharField(label='Tipo Factura', choices=[('cr', 'Credito'), ('ct', 'Contado')], max_length=2)
+	tipo_pago = forms.CharField(label='Tipo de Pago', choices=[('ef', 'Efectivo'), ('tr', 'Tarjeta'), ('ck', 'Cheque')], max_length=2)
+	descuento = forms.DecimalField(label='Descuento', max_digits=6, decimal_places=2, initial=0.00)
+	
+
+"""
+
+class fFacturaOrdenRuta(forms.ModelForm):
+
+	class Meta:
+		model = models.Factura
+		fields = ['fecha', 'camion', 'ruta', 'vendedor', 'facturado']
+		widgets = {
+			'fecha':forms.TextInput(attrs={'readonly':True}),
+			'camion':forms.TextInput(attrs={'readonly':True}),
+			'ruta':forms.TextInput(attrs={'readonly':True}),
+			'vendedor':forms.TextInput(attrs={'readonly':True}),
+		}
+
+
+class fFacturaDetalleOrden(forms.ModelForm):
+
+	class Meta:
+		model = models.DetalleOrdenRuta
+		exclude = ['id', 'costo_total', 'costo_vendido', 'cantidad_recibida', 'costo_faltante']
+		widgets = {
+			'orden':forms.HiddenInput,
+			'producto':forms.TextInput(attrs={'readonly':True}),
+			'unidad_medida':forms.TextInput(attrs={'readonly':True}),
+			'cantidad_entregada':forms.TextInput(attrs={'readonly':True}),
+		}
+		labels = {
+			'unidad_medida':'Unidad de Medida',
+			'cantidad_entregada':'Cant. Entregado',
+			'cantidad_vendida':'Cant. Vendido',
+		}
+
+"""
 
 
 class fLiquidaDetalleOrdenRuta(forms.ModelForm):

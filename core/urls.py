@@ -39,6 +39,13 @@ urlpatterns = [
 		path('<int:_id>/editar/', views.editar_medida, name='vEditarMedida'),
 		path('<int:_id>/eliminar/', views.eliminar_medida, name='vEliminarMedida'),
 		])),
+	path('productos/', include([
+		path('page/<int:page>/', views.lista_productos, name='vListaProductos'),
+		path('<int:_id>/ver/', views.ver_producto, name='vVerProducto'),
+		path('nuevo/', views.nuevo_producto, name='vNuevoProducto'),
+		path('<int:_id>/editar/', views.editar_producto, name='vEditarProducto'),
+		path('<int:_id>/eliminar/', views.eliminar_producto, name='vEliminarProducto'),
+		])),
 	path('camiones/', include([
 		path('', views.lista_camiones, name='vListaCamiones'),
 		path('nuevo/', views.nuevo_camion, name='vNuevoCamion'),
