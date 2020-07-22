@@ -634,7 +634,7 @@ def cancelar_factura(request, _id):
 
 				fecha = datetime.date.today()
 
-				descripcion = "Venta de producto al contado" if factura.tipo == 'ct' else "Venta de producto al crédito"
+				descripcion = "Venta de producto al contado" 
 
 				asiento = Asiento()
 
@@ -653,9 +653,6 @@ def cancelar_factura(request, _id):
 					factura.asiento = asiento
 
 					factura.save()
-
-			elif factura.asiento != None and factura.tipo == 'cr':
-				pass
 
 			else:
 
@@ -685,11 +682,19 @@ def asiento_factura(request, _id):
 	
 	factura = get_object_or_404(models.Factura, pk=_id)
 
+	if factura.tipo != 'cr':
+		
+		messages.info(request, "Debe proceder a cancelar la factura.")
+
+		return redirect('ver_factura', {'_id':_id})
+
+	asiento = None
+
 	if factura.asiento == None:
 
 		fecha = datetime.date.today()
 
-		descripcion = "Venta de producto al contado" if factura.tipo == 'ct' else "Venta de producto al crédito"
+		descripcion = "Venta de producto al crédito"
 
 		asiento = Asiento()
 
@@ -709,9 +714,13 @@ def asiento_factura(request, _id):
 
 			factura.save()
 
+	else:
+
+		asiento = factura.asiento
+
 	messages.info(request, "Ingrese el detalle del asiento contable.")
 
-	ruta = reverse('contabilidad:vDetalleAsiento', kwargs={'_id':factura.asiento.id, 'tipo':3})
+	ruta = reverse('contabilidad:vDetalleAsiento', kwargs={'_id':asiento.id, 'tipo':3})
 
 	return redirect(ruta)
 

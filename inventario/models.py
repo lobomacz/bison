@@ -19,6 +19,9 @@ class Almacen(models.Model):
 
 	class Meta:
 		ordering = ['id', 'cuenta']
+		permissions = [
+			('add_asiento', 'Ingresa Asientos Contables')
+		]
 
 
 class Entrada(models.Model):

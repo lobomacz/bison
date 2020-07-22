@@ -279,6 +279,8 @@ def entradas(request, page=1):
 
 	empresa = settings.NOMBRE_EMPRESA
 
+	almacenes = models.Almacen.objects.all()
+
 	almacen = None
 
 	entradas = None
@@ -301,7 +303,7 @@ def entradas(request, page=1):
 		entradas = paginador.get_page(page)
 
 
-	c = {'titulo':'Listado de Entradas de Almacen', 'seccion':'Entradas de Almacen', 'empresa':empresa, 'entradas':entradas, 'page':page}
+	c = {'titulo':'Listado de Entradas de Almacen', 'seccion':'Entradas de Almacen', 'empresa':empresa, 'entradas':entradas, 'page':page, 'almacenes':almacenes}
 
 	if almacen != None:
 		
@@ -396,19 +398,19 @@ def detalle_entrada(request, _id):
 @permission_required('inventario.add_entrada')
 def form_entrada(request, _id=None):
 
-	entrada = get_object_or_404(models.Entrada, pk=_id) if _id != None else None
+	registro = get_object_or_404(models.Entrada, pk=_id) if _id != None else None
 
 	if request.method == "GET":
 
-		if entrada != None and entrada.asiento != None:
+		if registro != None and registro.asiento != None:
 			
-			if entrada.asiento.contabilizado:
+			if registro.asiento.contabilizado:
 				
 				messages.error(request, "El asiento del registro está contabilizado. No se puede modificar.")
 
 				return redirect('entrada', {'_id':_id})
 		
-		form = forms.fEntrada() if _id == None else forms.fEntrada(entrada)
+		form = forms.fEntrada() if _id == None else forms.fEntrada(registro)
 
 		params = {'_id':_id} if _id != None else {}
 
@@ -424,7 +426,7 @@ def form_entrada(request, _id=None):
 
 	elif request.method == "POST":
 		
-		form = forms.fEntrada(request.POST) if entrada == None else forms.fEntrada(request.POST, instance=entrada)
+		form = forms.fEntrada(request.POST) if _id == None else forms.fEntrada(request.POST, instance=registro)
 
 		if form. is_valid():
 
@@ -432,7 +434,7 @@ def form_entrada(request, _id=None):
 
 			entrada.save()
 
-			if entrada == None:
+			if registro == None:
 
 				messages.success(request, "La entrada se registró con éxito.")
 
@@ -445,6 +447,111 @@ def form_entrada(request, _id=None):
 				messages.info(request, "A continuación editar el detalle de la entrada.")
 
 			return redirect('detalle_entrada', {'_id':entrada.id})
+
+
+
+
+
+@login_required
+@permission_required('inventario.delete_entrada')
+def eliminar_entrada(request, _id):
+
+	if request.method == "POST":
+
+		entrada = get_object_or_404(models.Entrada, pk=_id)
+
+		if entrada.asiento != None:
+		
+			if entrada.asiento.contabilizado:
+				
+				messages.error(request, "El asiento del registro está contabilizado. No se puede eliminar.")
+
+				return redirect('entrada', {'_id':_id})
+
+		entrada.delete()
+
+		return redirect('entradas')
+
+
+
+
+@login_required
+@permission_required('inventario.add_asiento')
+def asiento(request, _id, tipo):
+
+	tipos = {
+		'en':('entrada', 4), 
+		'sa':('salida', 5), 
+		'tr':('traslado', 6),
+		}
+
+	if tipo not in tipos.keys():
+		
+		messages.warning(request, "No se reconoce el tipo de movimiento. Revise y vuelva a intentarlo.")
+
+		return redirect('index')
+
+	movimiento = None
+
+	asiento = None
+
+	fecha = datetime.date.today()
+	
+
+	if tipo == 'en':
+		
+		movimiento = get_object_or_404(models.Entrada, pk=_id)
+
+	elif tipo == 'sa':
+
+		movimiento = get_object_or_404(models.Salida, pk=_id)
+
+	else:
+		
+		movimiento = get_object_or_404(models.Traslado, pk=_id)
+
+		
+
+
+	if movimiento.asiento == None:
+			
+		asiento = Asiento()
+
+		asiento.fecha = fecha
+
+		asiento.descripcion = movimiento.descripcion
+
+		asiento.referencia = "{0} No.{1}".format(tipos[tipo][0].capitalize(), movimiento.id)
+
+		asiento.observaciones = movimiento.referencia
+
+		try:
+			with transaction.atomic():
+
+				asiento.save()
+
+				movimiento.asiento = asiento
+
+				movimiento.save()
+				
+		except DatabaseError:
+			
+			messages.error(request, "Ocurrió un error al registrar el asiento contable.")
+
+			return redirect(tipos[tipo][0], {'_id':_id})
+	else:
+
+		if movimiento.asiento.contabilizado:
+			
+			messages.warning(request, "El asiento del registro está contabilizado. No se puede modificar.")
+
+			return redirect(tipos[tipo][0], {'_id':_id})
+
+		asiento = movimiento.asiento
+
+	messages.info(request, "A continuación, registrar el detalle del asiento contable.")
+
+	return redirect(reverse('contabilidad:vDetalleAsiento', kwargs={'_id':asiento.id, 'tipo':tipos[tipo][1]}))
 
 
 
@@ -574,11 +681,19 @@ def detalle_salida(request, _id):
 @permission_required('inventario.add_salida')
 def form_salida(request, _id=None):
 
-	salida = get_object_or_404(models.Salida, pk=_id) if _id != None else None
+	registro = get_object_or_404(models.Salida, pk=_id) if _id != None else None
 
 	if request.method == "GET":
+
+		if registro != None and registro.asiento != None:
+			
+			if registro.asiento.contabilizado:
+				
+				messages.error(request, "El asiento del registro está contabilizado. No se puede modificar.")
+
+				return redirect('salida', {'_id':_id})
 		
-		form = forms.fSalida() if salida == None else forms.fSalida(salida)
+		form = forms.fSalida() if registro == None else forms.fSalida(registro)
 
 		empresa = settings.NOMBRE_EMPRESA
 
@@ -590,10 +705,9 @@ def form_salida(request, _id=None):
 
 		return render(request, 'core/forms/form_template.html', c)
 
-
 	elif request.method == "POST":
 		
-		form = forms.fSalida(request.POST) if salida == None else forms.fSalida(request.POST, instance=salida)
+		form = forms.fSalida(request.POST) if registro == None else forms.fSalida(request.POST, instance=registro)
 
 		if form.is_valid():
 			
@@ -601,7 +715,7 @@ def form_salida(request, _id=None):
 
 			salida.save()
 
-			if salida == None:
+			if registro == None:
 				
 				messages.success(request, "La salida se registró con éxito.")
 
@@ -612,7 +726,6 @@ def form_salida(request, _id=None):
 				messages.success(request, "La salida se actualizó con éxito.")
 
 				messages.info(request, "A continuación, editar el detalle de la salida.")
-
 
 			return redirect('detalle_salida', {'_id':salida.id})
 
