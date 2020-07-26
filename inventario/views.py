@@ -9,7 +9,7 @@ from django.db import transaction
 from django.db.models import Q, Sum
 from bison.core.models import Empleado 
 from bison.contabilidad.models import Asiento
-from bison.facturacion.models import OrdenRuta
+from bison.ventas.models import OrdenRuta
 from . import forms, models
 import datetime
 
@@ -33,7 +33,7 @@ def index(request):
 
 
 @login_required
-@permission_required('facturacion.change_ordenruta')
+@permission_required('ventas.change_ordenruta')
 def entregar_orden_ruta(request, _id):
 	
 	orden = get_object_or_404(models.OrdenRuta, pk=_id)
@@ -63,7 +63,7 @@ def entregar_orden_ruta(request, _id):
 
 
 @login_required
-@permission_required(['facturacion.change_ordenruta', 'facturacion.change_detalleordenruta'])
+@permission_required(['ventas.change_ordenruta', 'ventas.change_detalleordenruta'])
 def liquidar_orden_ruta(request, _id):
 	
 	orden = get_object_or_404(models.OrdenRuta, pk=_id)
@@ -313,6 +313,51 @@ def entradas(request, page=1):
 
 
 
+@login_required
+@permission_required('inventario.view_entrada')
+def entradas_filtro(request, page=1):
+
+	limite = settings.LIMITE_FILAS
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	entradas = None
+
+	titulo = ''
+
+	if len(request.GET['id_almacen']) > 0:
+		
+		almacen = get_object_or_404(models.Almacen, pk=request.GET.get('id_almacen'))
+
+		entradas = almacen.entradas_set.all()
+
+		titulo = 'Entradas por Almacen'
+
+		if len(request.GET['finicio']) > 0 and len(request.GET['ffinal']) > 0:
+		
+			entradas = entradas.filter( fecha__gte=request.GET.get('finicio'), fecha__lte)
+
+			titulo = titulo + ' por Rango de Fechas'
+
+	elif len(request.GET['finicio']) > 0 and len(request.GET['ffinal']) > 0:
+		
+		entradas = models.Entrada.filter(fecha__gte=request.GET.get('finicio'), fecha__lte)
+
+		titulo = 'Entradas por Rango de Fechas'
+
+
+	if entradas != None and entradas.count() > limite:
+		
+		paginador = Paginator(entradas, limite)
+
+		entradas = paginador.get_page(page)
+
+	c = {'titulo':titulo, 'seccion':'Entradas de Almacen', 'empresa':empresa, 'entradas':entradas, 'page':page}
+
+	return render(request, 'inventario/entradas.html', c)
+
+	
+
 
 @login_required
 @permission_required('inventario.view_entrada')
@@ -390,6 +435,28 @@ def detalle_entrada(request, _id):
 			messages.success(request, "Los datos se registraron con éxito.")
 
 			return redirect('entrada', {'_id':_id})
+
+
+
+@login_required
+@permission_required('inventario.delete_detalleentrada')
+def eliminar_detalleEntrada(request, _id):
+
+	if request.method == "POST":
+		
+		detalle = get_object_or_404(models.DetalleEntrada, pk=_id)
+
+		entrada = detalle.entrada
+
+		if entrada.asiento != None:
+			
+			messages.warning(request, "La entrada posee asiento contable. No se puede eliminar el detalle.")
+
+			return redirect('ver_entrada', {'_id':entrada.id})
+
+		detalle.delete()
+
+		return redirect('ver_entrada', {'_id':entrada.id})
 	
 
 
@@ -510,7 +577,6 @@ def asiento(request, _id, tipo):
 		
 		movimiento = get_object_or_404(models.Traslado, pk=_id)
 
-		
 
 
 	if movimiento.asiento == None:
@@ -597,6 +663,51 @@ def salidas(request, page=1):
 
 
 
+@login_required
+@permission_required('inventario.view_salida')
+def salidas_filtro(request, page=1):
+
+	limite = settings.LIMITE_FILAS
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	salidas = None
+
+	titulo = ''
+
+	if len(request.GET['id_almacen']) > 0:
+		
+		almacen = get_object_or_404(models.Almacen, pk=request.GET.get('id_almacen'))
+
+		salidas = almacen.salidas_set.all()
+
+		titulo = 'Salidas por Almacen'
+
+		if len(request.GET['finicio']) > 0 and len(request.GET['ffinal']) > 0:
+		
+			salidas = salidas.filter( fecha__gte=request.GET.get('finicio'), fecha__lte)
+
+			titulo = titulo + ' por Rango de Fechas'
+
+	elif len(request.GET['finicio']) > 0 and len(request.GET['ffinal']) > 0:
+		
+		salidas = models.Salida.filter(fecha__gte=request.GET.get('finicio'), fecha__lte)
+
+		titulo = 'Salidas por Rango de Fechas'
+
+
+	if salidas != None and salidas.count() > limite:
+		
+		paginador = Paginator(salidas, limite)
+
+		salidas = paginador.get_page(page)
+
+	c = {'titulo':titulo, 'seccion':'Salidas de Almacen', 'empresa':empresa, 'salidas':salidas, 'page':page}
+
+	return render(request, 'inventario/salidas.html', c)
+
+
+
 
 @login_required
 @permission_required('inventario.view_salida')
@@ -615,6 +726,28 @@ def salida(request, _id):
 	c = {'titulo':'Salida', 'seccion':'Salidas de Almacen', 'empresa':empresa, 'salida':salida, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
 
 	return render(request, 'inventario/ver_salida.html', c)
+
+
+
+@login_required
+@permission_required('inventario.delete_detalleSalida')
+def eliminar_detallesalida(request, _id):
+
+	if request.method == "POST":
+		
+		detalle = get_object_or_404(models.DetalleSalida, pk=_id)
+
+		salida = detalle.salida
+
+		if salida.asiento != None:
+			
+			messages.warning(request, "La salida posee asiento contable. No se puede eliminar el detalle.")
+
+			return redirect('ver_salida', {'_id':salida.id})
+
+		detalle.delete()
+
+		return redirect('ver_salida', {'_id':salida.id})
 
 
 

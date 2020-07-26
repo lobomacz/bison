@@ -1,10 +1,10 @@
 from django.urls import path, include
 from . import views
 
-app_name = 'facturacion'
+app_name = 'ventas'
 
 urlpatterns = [
-	path('', views.index, name = 'vIndexFacturacion'),
+	path('', views.index, name = 'vIndexVentas'),
 	#path('error/', views.error, name='vError'),
 	path('facturas/', include([
 		path('page/<int:page>/', views.lista_ventas, name='vVentasPeriodo'),

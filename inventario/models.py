@@ -1,7 +1,7 @@
 from django.db import models
 from bison.contabilidad.models import Cuenta, Asiento
 from bison.core.models import Categoria, Unidad, Empleado, Producto
-from bison.facturacion.models import Vendedor
+from bison.ventas.models import Vendedor
 
 # Create your models here.
 

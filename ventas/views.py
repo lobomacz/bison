@@ -22,7 +22,7 @@ import datetime, calendar, logging
 @login_required
 def index(request):
 
-	if not request.user.groups.filter(name='Facturacion').count() > 0:
+	if not request.user.groups.filter(name='Ventas').count() > 0:
 		
 		messages.warning(request, "No tiene acceso a esta sección.")
 
@@ -32,20 +32,20 @@ def index(request):
 
 	periodo = models.Periodo.objects.get(activo=True)
 
-	c = {'titulo':'Menú de Ventas', 'seccion':'Facturación', 'empresa':empresa, 'periodo':periodo}
+	c = {'titulo':'Menú de Ventas', 'seccion':'Ventas', 'empresa':empresa, 'periodo':periodo}
 	
 	return render(request, 'indice.html', c)
 
 
 @login_required
-@permission_required('facturacion.view_factura')
+@permission_required('ventas.view_factura')
 def lista_facturas(request, page=1, inicio=None, final=None):
 
 	facturas = None
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	c = {'empresa':empresa, 'seccion':'Facturación', 'titulo':'Lista de Facturas', 'page':page}
+	c = {'empresa':empresa, 'seccion':'Ventas', 'titulo':'Lista de Facturas', 'page':page}
 
 	limite = settings.LIMITE_FILAS
 
@@ -73,13 +73,13 @@ def lista_facturas(request, page=1, inicio=None, final=None):
 	
 	c['facturas'] = facturas
 
-	return render(request, 'facturacion/lista_facturas.html', c)
+	return render(request, 'ventas/lista_facturas.html', c)
 
 
 
 
 @login_required
-@permission_required('facturacion.view_proforma')
+@permission_required('ventas.view_proforma')
 def lista_proformas(request, page=1, inicio=None, final=None):
 
 	dias_vigencia = settings.VIGENCIA_PROFORMA
@@ -96,7 +96,7 @@ def lista_proformas(request, page=1, inicio=None, final=None):
 
 	proformas = None
 
-	c = {'titulo':'Listado de Proformas', 'seccion':'Facturación', 'empresa':empresa, 'page':page}
+	c = {'titulo':'Listado de Proformas', 'seccion':'Ventas', 'empresa':empresa, 'page':page}
 
 	validas = models.Proforma.objects.filter(valida=True)
 
@@ -129,13 +129,13 @@ def lista_proformas(request, page=1, inicio=None, final=None):
 
 	c['proformas'] = proformas
 
-	return render(request, 'facturacion/lista_proformas.html', c)
+	return render(request, 'ventas/lista_proformas.html', c)
 
 
 
 
 @login_required
-@permission_required('facturacion.view_proforma')
+@permission_required('ventas.view_proforma')
 def ver_proforma(request, _id):
 
 	proforma = get_object_or_404(models.Proforma, pk=_id)
@@ -148,14 +148,14 @@ def ver_proforma(request, _id):
 
 	ruta_reemitir = reverse('vReemitirProforma', kwargs={'_id':_id})
 
-	c = {'titulo':'Detalle de Proforma', 'seccion':'Facturación', 'proforma':proforma, 'ruta_edit':ruta_edit, 'ruta_anular':ruta_anular, 'ruta_reemitir':ruta_reemitir}
+	c = {'titulo':'Detalle de Proforma', 'seccion':'Ventas', 'proforma':proforma, 'ruta_edit':ruta_edit, 'ruta_anular':ruta_anular, 'ruta_reemitir':ruta_reemitir}
 
-	return render(request, 'facturacion/ver_proforma.html', c)
+	return render(request, 'ventas/ver_proforma.html', c)
 
 
 
 @login_required
-@permission_required(['facturacion.add_proforma', 'facturacion.change_proforma', 'facturacion.add_detalleproforma', 'facturacion.change_detalleproforma'])
+@permission_required(['ventas.add_proforma', 'ventas.change_proforma', 'ventas.add_detalleproforma', 'ventas.change_detalleproforma'])
 def detalle_proforma(request, _id):
 
 	proforma = get_object_or_404(models.Proforma, pk=_id)
@@ -172,7 +172,7 @@ def detalle_proforma(request, _id):
 
 		ruta = reverse('vDetalleProforma', kwargs={'_id':_id})
 
-		c = {'titulo':'Detalle de Proforma', 'seccion':'Facturación', 'empresa':empresa, 'proforma':proforma, 'formset':formset, 'ruta':ruta}
+		c = {'titulo':'Detalle de Proforma', 'seccion':'Ventas', 'empresa':empresa, 'proforma':proforma, 'formset':formset, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -220,7 +220,7 @@ def detalle_proforma(request, _id):
 
 
 @login_required
-@permission_required('facturacion.add_proforma')
+@permission_required('ventas.add_proforma')
 def nueva_proforma(request):
 
 	if request.method == "GET":
@@ -237,7 +237,7 @@ def nueva_proforma(request):
 
 		ruta = reverse('vNuevaProforma')
 
-		c = {'titulo':'Ingreso de Proforma', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Ingreso de Proforma', 'seccion':'Ventas', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -268,7 +268,7 @@ def nueva_proforma(request):
 
 #REDEFINIR LA LOGICA DE EDICION DE PROFORMA
 @login_required
-@permission_required('facturacion.change_proforma')
+@permission_required('ventas.change_proforma')
 def editar_proforma(request, _id):
 
 	proforma = get_object_or_404(models.Proforma, pk=_id)
@@ -302,7 +302,7 @@ def editar_proforma(request, _id):
 
 		ruta = reverse('vEditarProforma', kwargs={'_id':_id})
 
-		c = {'titulo':'Editar Proforma', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Editar Proforma', 'seccion':'Ventas', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -326,7 +326,7 @@ def editar_proforma(request, _id):
 
 
 @login_required
-@permission_required(['facturacion.add_proforma', 'facturacion.change_proforma'])
+@permission_required(['ventas.add_proforma', 'ventas.change_proforma'])
 def re_proforma(request, _id):
 
 	if request.method == 'POST':
@@ -349,7 +349,7 @@ def re_proforma(request, _id):
 
 
 @login_required
-@permission_required('facturacion.anular_proforma')
+@permission_required('ventas.anular_proforma')
 def anular_proforma(request, _id):
 
 	if request.method == "POST":
@@ -371,7 +371,7 @@ def anular_proforma(request, _id):
 
 
 @login_required
-@permission_required('facturacion.view_factura')
+@permission_required('ventas.view_factura')
 def ver_factura(request, _id):
 
 	factura = get_object_or_404(forms.Factura, pk=_id)
@@ -388,15 +388,15 @@ def ver_factura(request, _id):
 
 	ruta_entregar = reverse('vEntregarFactura',kwargs=params)
 
-	c = {'titulo':'Factura', 'seccion':'Facturación', 'factura':factura, 'empresa':empresa, 'ruta_edit':ruta_edit, 'ruta_cancelar':ruta_cancelar, 'ruta_entregar':ruta_entregar, 'ruta_anular':ruta_anular}
+	c = {'titulo':'Factura', 'seccion':'Ventas', 'factura':factura, 'empresa':empresa, 'ruta_edit':ruta_edit, 'ruta_cancelar':ruta_cancelar, 'ruta_entregar':ruta_entregar, 'ruta_anular':ruta_anular}
 
-	return render(request, 'facturacion/ver_factura.html', c)
+	return render(request, 'ventas/ver_factura.html', c)
 
 
 
 
 @login_required
-@permission_required(['facturacion.change_factura', 'facturacion.change_detallefactura', 'facturacion.add_detallefactura'])
+@permission_required(['ventas.change_factura', 'ventas.change_detallefactura', 'ventas.add_detallefactura'])
 def detalle_factura(request, _id, _ido=None):
 
 	factura = get_object_or_404(models.Factura, pk=_id)
@@ -415,7 +415,7 @@ def detalle_factura(request, _id, _ido=None):
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
-		c = {'titulo':'Detalle de Factura', 'seccion':'Facturación', 'empresa':empresa, 'formset':formset, 'factura':factura, 'ruta':ruta}
+		c = {'titulo':'Detalle de Factura', 'seccion':'Ventas', 'empresa':empresa, 'formset':formset, 'factura':factura, 'ruta':ruta}
 
 		return render(request, 'core/forms/inline_formset_template.html', c)
 
@@ -484,7 +484,7 @@ def detalle_factura(request, _id, _ido=None):
 
 
 @login_required
-@permission_required('facturacion.change_factura')
+@permission_required('ventas.change_factura')
 def eliminar_detalle_factura(request, _id, _idd):
 
 	if request.method == "POST":
@@ -508,7 +508,7 @@ def eliminar_detalle_factura(request, _id, _idd):
 
 
 @login_required
-@permission_required('facturacion.add_factura')
+@permission_required('ventas.add_factura')
 def nueva_factura(request):
 
 	if request.method == "GET":
@@ -521,7 +521,7 @@ def nueva_factura(request):
 
 		ruta = reverse('vNuevaFactura')
 
-		c = {'titulo':'Nueva Factura', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Nueva Factura', 'seccion':'Ventas', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -550,7 +550,7 @@ def nueva_factura(request):
 
 
 @login_required
-@permission_required('facturacion.change_factura')
+@permission_required('ventas.change_factura')
 def editar_factura(request, _id):
 
 	factura = get_object_or_404(models.Factura, pk=_id)
@@ -569,7 +569,7 @@ def editar_factura(request, _id):
 
 		ruta = reverse('vEditarFactura', kwargs={'_id':_id})
 
-		c = {'titulo':'Edición de Factura', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Edición de Factura', 'seccion':'Ventas', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -592,7 +592,7 @@ def editar_factura(request, _id):
 
 '''
 @login_required
-@permission_required('facturacion.cancelar_factura')
+@permission_required('ventas.cancelar_factura')
 def detalle_asiento_factura(request, _id, _ida):
 	
 	factura = get_object_or_404(models.Factura, pk=_id)
@@ -602,7 +602,7 @@ def detalle_asiento_factura(request, _id, _ida):
 
 
 @login_required
-@permission_required('facturacion.cancelar_factura')
+@permission_required('ventas.cancelar_factura')
 def asiento_factura(request, _id):
 	
 	factura = get_object_or_404(models.Factura, pk=_id)
@@ -619,7 +619,7 @@ def asiento_factura(request, _id):
 
 
 @login_required
-@permission_required('facturacion.cancelar_factura')
+@permission_required('ventas.cancelar_factura')
 def cancelar_factura(request, _id):
 
 	if request.method == "POST":
@@ -677,7 +677,7 @@ def cancelar_factura(request, _id):
 
 
 @login_required
-@permission_required('facturacion.asiento_factura')
+@permission_required('ventas.asiento_factura')
 def asiento_factura(request, _id):
 	
 	factura = get_object_or_404(models.Factura, pk=_id)
@@ -728,7 +728,7 @@ def asiento_factura(request, _id):
 
 
 @login_required
-@permission_required('facturacion.anular_factura')
+@permission_required('ventas.anular_factura')
 def anular_factura(request, _id):
 	
 	if request.method == "POST":
@@ -772,7 +772,7 @@ def anular_factura(request, _id):
 
 
 @login_required
-@permission_required('facturacion.view_cliente')
+@permission_required('ventas.view_cliente')
 def clientes(request, page=1):
 
 	empresa = settings.NOMBRE_EMPRESA
@@ -791,9 +791,9 @@ def clientes(request, page=1):
 
 			clientes = paginador.get_page(page)
 
-		c = {'titulo':'Lista de Clientes', 'seccion':'Facturación', 'empresa':empresa, 'clientes':clientes, 'page':page, 'ruta':ruta}
+		c = {'titulo':'Lista de Clientes', 'seccion':'Ventas', 'empresa':empresa, 'clientes':clientes, 'page':page, 'ruta':ruta}
 
-		return render(request, 'facturacion/lista_clientes.html', c)
+		return render(request, 'ventas/lista_clientes.html', c)
 
 	elif request.method == "POST":
 
@@ -805,22 +805,22 @@ def clientes(request, page=1):
 
 
 @login_required
-@permission_required('facturacion.view_cliente')
+@permission_required('ventas.view_cliente')
 def ver_cliente(request, _id):
 
 	cliente = get_object_or_404(models.Cliente, pk=cliente_id)
 
 	ruta_edit = reverse('vEditarCliente', kwargs={'_id':cliente_id})
 
-	c = {'titulo':'Datos de Cliente', 'seccion':'Facturación', 'empresa':empresa, 'cliente':cliente, 'ruta_edit':ruta_edit}
+	c = {'titulo':'Datos de Cliente', 'seccion':'Ventas', 'empresa':empresa, 'cliente':cliente, 'ruta_edit':ruta_edit}
 
-	return render('facturacion/ver_cliente.html', c)
+	return render('ventas/ver_cliente.html', c)
 
 
 
 
 @login_required
-@permission_required('facturacion.add_cliente')
+@permission_required('ventas.add_cliente')
 def nuevo_cliente(request):
 
 	if request.method == "GET":
@@ -831,7 +831,7 @@ def nuevo_cliente(request):
 
 		ruta = reverse('vNuevoCliente')
 
-		c = {'titulo':'Ingreso de Clientes', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Ingreso de Clientes', 'seccion':'Ventas', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -854,7 +854,7 @@ def nuevo_cliente(request):
 
 
 @login_required
-@permission_required('facturacion.change_cliente')
+@permission_required('ventas.change_cliente')
 def editar_cliente(request, _id):
 
 	cliente = get_object_or_404(_id)
@@ -867,7 +867,7 @@ def editar_cliente(request, _id):
 
 		ruta = reverse('vEditarCliente', kwargs={'_id':cliente.id})
 
-		c = {'seccion':'Facturación', 'titulo':'Editar Datos de Cliente', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Editar Datos de Cliente', 'seccion':'Ventas', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -889,7 +889,7 @@ def editar_cliente(request, _id):
 
 
 @login_required
-@permission_required('facturacion.view_ordenruta')
+@permission_required('ventas.view_ordenruta')
 def lista_ordenes_ruta(request, page=1):
 
 	limite = settings.LIMITE_FILAS
@@ -906,19 +906,19 @@ def lista_ordenes_ruta(request, page=1):
 
 	c = {
 	'titulo':'Lista de Ordenes de Ruta', 
-	'seccion':'Facturación', 
+	'seccion':'Ventas', 
 	'empresa':empresa, 
 	'ordenes':ordenes, 
 	'page':page
 	}
 
-	return render(request, 'facturacion/lista_ordenes_ruta.html', c)
+	return render(request, 'ventas/lista_ordenes_ruta.html', c)
 	
 
 
 
 @login_required
-@permission_required('facturacion.view_ordenruta')
+@permission_required('ventas.view_ordenruta')
 def ver_orden_ruta(request, _id):
 
 	orden = get_object_or_404(models.OrdenRuta, pk=_id)
@@ -939,7 +939,7 @@ def ver_orden_ruta(request, _id):
 
 	c = {
 	'titulo':'Orden de Ruta', 
-	'seccion':'Facturación', 
+	'seccion':'Ventas', 
 	'empresa':empresa, 
 	'orden':orden, 
 	'ruta_edit':ruta_edit, 
@@ -949,12 +949,12 @@ def ver_orden_ruta(request, _id):
 	'ruta_entregar':ruta_entregar
 	}
 
-	return render(request, 'facturacion/ver_orden_ruta.html', c)
+	return render(request, 'ventas/ver_orden_ruta.html', c)
 
 
 
 @login_required
-@permission_required(['facturacion.add_detalleordenruta', 'facturacion.change_detalleordenruta'])
+@permission_required(['ventas.add_detalleordenruta', 'ventas.change_detalleordenruta'])
 def detalle_orden_ruta(request, _id):
 	
 	orden = get_object_or_404(models.OrdenRuta, pk=_id)
@@ -965,7 +965,7 @@ def detalle_orden_ruta(request, _id):
 
 		messages.error(request, 'No se puede modificar el detalle de la orden de ruta.')
 		
-		return redirect(ruta) #render(request, 'error.html', {'titulo':'Error de Acceso', 'seccion':'Facturación', 'empresa':settings.NOMBRE_EMPRESA, 'mensaje':'La orden de ruta no puede ser modificada.', 'view':'vListaOrdenesRuta'})
+		return redirect(ruta) #render(request, 'error.html', {'titulo':'Error de Acceso', 'seccion':'Ventas', 'empresa':settings.NOMBRE_EMPRESA, 'mensaje':'La orden de ruta no puede ser modificada.', 'view':'vListaOrdenesRuta'})
 
 	extra_row = 4 if orden.detalleordenruta_set.count() > 0 else 10
 
@@ -979,7 +979,7 @@ def detalle_orden_ruta(request, _id):
 
 		ruta = reverse('vDetalleOrdenRuta', kwargs={'_id':_id})
 
-		c = {'titulo':'Detalle de Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'formset':formset, 'ruta':ruta}
+		c = {'titulo':'Detalle de Orden de Ruta', 'seccion':'Ventas', 'empresa':empresa, 'formset':formset, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -1007,7 +1007,7 @@ def detalle_orden_ruta(request, _id):
 
 
 @login_required
-@permission_required('facturacion.add_ordenruta')
+@permission_required('ventas.add_ordenruta')
 def nueva_orden_ruta(request):
 
 	if request.method == "GET":
@@ -1020,7 +1020,7 @@ def nueva_orden_ruta(request):
 
 		ruta = reverse('vNuevaOrdenRuta')
 
-		c = {'titulo':'Nueva Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Nueva Orden de Ruta', 'seccion':'Ventas', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -1048,7 +1048,7 @@ def nueva_orden_ruta(request):
 
 
 @login_required
-@permission_required('facturacion.change_ordenruta')
+@permission_required('ventas.change_ordenruta')
 def editar_orden_ruta(request, _id):
 
 	orden = get_object_or_404(models.OrdenRuta, pk=_id)
@@ -1061,7 +1061,7 @@ def editar_orden_ruta(request, _id):
 
 		ruta = reverse('vEditarOrdenRuta', kwargs={'_id':_id})
 
-		c = {'titulo':'Editar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Editar Orden de Ruta', 'seccion':'Ventas', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -1085,7 +1085,7 @@ def editar_orden_ruta(request, _id):
 
 
 @login_required
-@permission_required('facturacion.autorizar_ordenruta')
+@permission_required('ventas.autorizar_ordenruta')
 def autorizar_orden_ruta(request, _id):
 
 	if request.method == "POST":
@@ -1118,14 +1118,14 @@ def autorizar_orden_ruta(request, _id):
 
 
 @login_required
-@permission_required('facturacion.facturar_ordenruta')
+@permission_required('ventas.facturar_ordenruta')
 def facturar_or_detalle(request, _id):
 	pass
 
 
 
 @login_required
-@permission_required('facturacion.facturar_ordenruta')
+@permission_required('ventas.facturar_ordenruta')
 def facturar_orden_ruta(request, _id):
 
 	ordenruta = get_object_or_404(models.OrdenRuta, pk=_id)
@@ -1179,7 +1179,7 @@ def facturar_orden_ruta(request, _id):
 
 
 @login_required
-@permission_required('facturacion.delete_ordenruta')
+@permission_required('ventas.delete_ordenruta')
 def eliminar_orden_ruta(request, _id):
 
 	if request.method == "POST":
@@ -1204,7 +1204,7 @@ def eliminar_orden_ruta(request, _id):
 
 
 @login_required
-@permission_required('facturacion.delete_detalleordenruta')
+@permission_required('ventas.delete_detalleordenruta')
 def eliminar_detalle_orden_ruta(request, _id, _idd):
 	
 	orden = get_object_or_404(models.OrdenRuta, pk=_id)
@@ -1213,7 +1213,7 @@ def eliminar_detalle_orden_ruta(request, _id, _idd):
 
 		messages.error(request, "Orden autorizada o anulada. No puede eliminar el detalle.")
 		
-		return redirect('ver_orden_ruta', {'_id':_id})#render(request, 'error.html', {'titulo':'Error!', 'seccion':'Facturación', 'mensaje':'No se puede eliminar la línea de detalle.', 'view':'vListaOrdenesRuta'})
+		return redirect('ver_orden_ruta', {'_id':_id})#render(request, 'error.html', {'titulo':'Error!', 'seccion':'Ventas', 'mensaje':'No se puede eliminar la línea de detalle.', 'view':'vListaOrdenesRuta'})
 
 	else:
 			
@@ -1228,7 +1228,7 @@ def eliminar_detalle_orden_ruta(request, _id, _idd):
 
 
 @login_required
-@permission_required('facturacion.view_vendedor')
+@permission_required('ventas.view_vendedor')
 def lista_vendedores(request, page=1):
 
 	empresa = settings.NOMBRE_EMPRESA
@@ -1243,14 +1243,14 @@ def lista_vendedores(request, page=1):
 
 		vendedores = paginador.get_page(page)
 
-	c = {'titulo':'Lista de Vendedores', 'seccion':'Facturación', 'vendedores':vendedores, 'empresa':empresa, 'page':page}
+	c = {'titulo':'Lista de Vendedores', 'seccion':'Ventas', 'vendedores':vendedores, 'empresa':empresa, 'page':page}
 
-	return render(request, 'facturacion/lista_vendedores.html', c)
+	return render(request, 'ventas/lista_vendedores.html', c)
 
 
 
 @login_required
-@permission_required('facturacion.view_vendedor')
+@permission_required('ventas.view_vendedor')
 def ver_vendedor(request, _id):
 
 	vendedor = get_object_or_404(models.Vendedor, pk=_id)
@@ -1263,13 +1263,13 @@ def ver_vendedor(request, _id):
 
 	ruta_desactivar = reverse('vDesactivarVendedor', kwargs=params)
 
-	c = {'titulo':'Datos de Vendedor', 'seccion':'Facturación', 'vendedor':vendedor, 'empresa':empresa, 'ruta_edit':ruta_edit, 'ruta_desactivar':ruta_desactivar}
+	c = {'titulo':'Datos de Vendedor', 'seccion':'Ventas', 'vendedor':vendedor, 'empresa':empresa, 'ruta_edit':ruta_edit, 'ruta_desactivar':ruta_desactivar}
 
-	return render(request, 'facturacion/ver_vendedor.html', c)
+	return render(request, 'ventas/ver_vendedor.html', c)
 
 
 @login_required
-@permission_required('facturacion.add_vendedor')
+@permission_required('ventas.add_vendedor')
 def nuevo_vendedor(request):
 
 	if request.method == "GET":
@@ -1280,7 +1280,7 @@ def nuevo_vendedor(request):
 
 		form = forms.fVendedor()
 
-		c = {'titulo':'Ingreso de Vendedor', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Ingreso de Vendedor', 'seccion':'Ventas', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		return render(request, 'core/forms/form_template.html', c)
 
@@ -1301,7 +1301,7 @@ def nuevo_vendedor(request):
 
 
 @login_required
-@permission_required('facturacion.change_vendedor')
+@permission_required('ventas.change_vendedor')
 def editar_vendedor(request, _id):
 
 	vendedor = get_object_or_404(models.Vendedor, pk=_id)
@@ -1320,7 +1320,7 @@ def editar_vendedor(request, _id):
 
 		ruta = reverse('vEditarVendedor', kwargs={'_id':_id})
 
-		c = {'titulo':'Editar Datos de Vendedor', 'seccion':'Facturación', 'form':form, 'empresa':empresa, 'ruta':ruta}
+		c = {'titulo':'Editar Datos de Vendedor', 'seccion':'Ventas', 'form':form, 'empresa':empresa, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -1341,7 +1341,7 @@ def editar_vendedor(request, _id):
 
 
 @login_required
-@permission_required('facturacion.desactivar_vendedor')
+@permission_required('ventas.desactivar_vendedor')
 def desactivar_vendedor(request, _id):
 
 	if request.method == "POST":
@@ -1378,21 +1378,21 @@ def desactivar_vendedor(request, _id):
 
 
 @login_required
-@permission_required('facturacion.view_ruta')
+@permission_required('ventas.view_ruta')
 def lista_rutas(request):
 
 	rutas = models.Ruta.objects.all() #get_list_or_404(models.Ruta)
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	c = {'titulo':'Listado de Rutas', 'seccion':'Facturación', 'empresa':empresa, 'rutas':rutas}
+	c = {'titulo':'Listado de Rutas', 'seccion':'Ventas', 'empresa':empresa, 'rutas':rutas}
 
-	return render(request, 'facturacion/lista_rutas.html', c)
+	return render(request, 'ventas/lista_rutas.html', c)
 
 
 
 @login_required
-@permission_required('facturacion.view_ruta')
+@permission_required('ventas.view_ruta')
 def ver_ruta(request, _id):
 
 	ruta = get_object_or_404(models.Ruta, pk=_id)
@@ -1405,14 +1405,14 @@ def ver_ruta(request, _id):
 
 	ruta_delete = reverse('vEliminarRuta', kwargs=params)
 
-	c = {'titulo':'Datos de la Ruta', 'seccion':'Facturación', 'empresa':empresa, 'ruta':ruta, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
+	c = {'titulo':'Datos de la Ruta', 'seccion':'Ventas', 'empresa':empresa, 'ruta':ruta, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
 
-	return render(request, 'facturacion/ver_ruta.html', c)
+	return render(request, 'ventas/ver_ruta.html', c)
 
 
 
 @login_required
-@permission_required('facturacion.add_ruta')
+@permission_required('ventas.add_ruta')
 def nueva_ruta(request):
 
 	if request.method == "GET":
@@ -1423,7 +1423,7 @@ def nueva_ruta(request):
 
 		ruta = reverse('vNuevaRuta')
 
-		c = {'titulo':'Ingreso de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Ingreso de Ruta', 'seccion':'Ventas', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -1447,7 +1447,7 @@ def nueva_ruta(request):
 
 
 @login_required
-@permission_required('facturacion.change_ruta')
+@permission_required('ventas.change_ruta')
 def editar_ruta(request, _id):
 
 	registro = get_object_or_404(models.Ruta, pk=_id)
@@ -1460,7 +1460,7 @@ def editar_ruta(request, _id):
 
 		ruta = reverse('vEditarRuta', kwargs={'_id':_id})
 
-		c = {'titulo':'Editar Datos de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Editar Datos de Ruta', 'seccion':'Ventas', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -1482,7 +1482,7 @@ def editar_ruta(request, _id):
 
 
 @login_required
-@permission_required('facturacion.delete_ruta')
+@permission_required('ventas.delete_ruta')
 def eliminar_ruta(request, _id):
 
 	ruta = get_object_or_404(models.Ruta, pk=_id)

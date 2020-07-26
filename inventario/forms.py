@@ -1,5 +1,5 @@
 from django import forms 
-from bison.facturacion.models import OrdenRuta
+from bison.ventas.models import OrdenRuta
 from . import models
 
 
