@@ -37,10 +37,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'core',
+    'cajabancos',
+    'compras',
     'contabilidad',
-    'ventas',
+    'core',
     'inventario',
+    'nomina',
+    'ventas',
+    'bootstrap4',
 ]
 
 MIDDLEWARE = [
@@ -58,7 +62,7 @@ ROOT_URLCONF = 'bison.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-#        'DIRS': [],
+#       'DIRS': [],
         'DIRS': [os.path.join(BASE_DIR, "templates")],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -150,6 +154,8 @@ VIGENCIA_PROFORMA = 15
 
 EXTRA_ROWS = 3
 
-LOGOUT_REDIRECT_URL = '/core/login/'
-
 LOGIN_URL = '/core/login/'
+
+LOGOUT_REDIRECT_URL = LOGIN_URL
+
+

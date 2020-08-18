@@ -41,7 +41,7 @@ class Empleado(models.Model):
 		return reverse('vVerEmpleado', {'_id':self.cedula})
 
 
-
+'''
 class Categoria(models.Model):
 
 	nombre = models.CharField(max_length=45)
@@ -53,6 +53,7 @@ class Categoria(models.Model):
 
 	def __str__(self):
 		return self.nombre
+'''
 
 		
 
@@ -77,7 +78,7 @@ class Producto(models.Model):
 		return self.nombre
 
 
-
+'''
 class Unidad(models.Model):
 
 	nombre = models.CharField(max_length=25)
@@ -96,15 +97,17 @@ class Unidad(models.Model):
 
 		return self.nombre
 
+'''
+
 
 
 class Conversion(object):
 	"""docstring for Conversion"""
 	
-	origen = models.ForeignKey(Unidad)
-	destino = models.ForeignKey(Unidad)
-	relacion_directa = models.DecimalField()
-	relacion_inversa = models.DecimalField()
+	origen = models.ForeignKey('TablaDetalle')
+	destino = models.ForeignKey('TablaDetalle')
+	relacion_directa = models.DecimalField(max_digits=8, decimal_places=4)
+	relacion_inversa = models.DecimalField(max_digits=8, decimal_places=4)
 
 	class Meta:
 		ordering = ['origen']
@@ -128,6 +131,22 @@ class Camion(models.Model):
 		return '{0} {1} Placa: {2}'.format(self.descripcion, self.anno, self.placa)
 
 
+class Tabla(models.Model):
+	"""Modelo de tablas generales"""
+	tabla = models.CharField(max_length=100)
+
+	def __str__(self):
+		return self.tabla.upper() + 'S'
+
+
+class TablaDetalle(models.Model):
+	"""Modelo de detalle de tablas generales"""
+	tabla = models.ForeignKey(Tabla, on_delete=models.CASCADE)
+	elemento = models.CharField(max_length=150)
+	codigo_equivalencia = models.CharField(max_length=25)
+
+	class Meta:
+		ordering = ['tabla', 'elemento']
 
 
 		

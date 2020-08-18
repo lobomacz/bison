@@ -27,7 +27,7 @@ def index(request):
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	c = {'titulo':'Panel de Inventario', 'empresa':empresa, 'seccion':'Inventario'}
+	c = {'titulo':'Inicio', 'empresa':empresa, 'seccion':'Inventario'}
 
 	return render(request, 'inventario/index.html', c)
 
@@ -40,7 +40,7 @@ def entregar_orden_ruta(request, _id):
 
 	if not orden.autorizado:
 
-		return render(request, 'error.html', {'titulo':'Error!', 'seccion':'Facturación', 'mensaje':'La orden no ha sido autorizada.', 'view':'vListaOrdenesRuta'})
+		return render(request, 'error.html', {'titulo':'Error!', 'seccion':'Inventario', 'mensaje':'La orden no ha sido autorizada.', 'view':'vListaOrdenesRuta'})
 
 	else:
 
@@ -48,7 +48,7 @@ def entregar_orden_ruta(request, _id):
 			
 			empresa = settings.NOMBRE_EMPRESA
 
-			c = {'titulo':'Entregar Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'view':'vEntregarOrdenRuta', 'id':orden.id}
+			c = {'titulo':'Entregar Orden de Ruta', 'seccion':'Inventario', 'empresa':empresa, 'view':'vEntregarOrdenRuta', 'id':orden.id}
 
 			return render(request, 'entregar_orden_ruta.html', c)
 
@@ -70,7 +70,7 @@ def liquidar_orden_ruta(request, _id):
 
 	if orden.anulado or orden.liquidado:
 		
-		return render(request, 'error.html', {'titulo':'Error de Acceso', 'seccion':'Facturación', 'empresa':settings.NOMBRE_EMPRESA, 'mensaje':'La orden de ruta no puede ser modificada.', 'view':'vListaOrdenesRuta'})
+		return render(request, 'error.html', {'titulo':'Error de Acceso', 'seccion':'Inventario', 'empresa':settings.NOMBRE_EMPRESA, 'mensaje':'La orden de ruta no puede ser modificada.', 'view':'vListaOrdenesRuta'})
 
 	DetalleFormset = inlineformset_factory(models.OrdenRuta, models.DetalleOrdenRuta, form=forms.fLiquidaDetalleOrdenRuta)
 
@@ -80,7 +80,7 @@ def liquidar_orden_ruta(request, _id):
 
 		formset = DetalleFormset(instance=orden)
 
-		c = {'titulo':'Liquidación de Orden de Ruta', 'seccion':'Facturación', 'empresa':empresa, 'formset':formset, 'view':'vLiquidarOrdenRuta', 'id':orden.id}
+		c = {'titulo':'Liquidación de Orden de Ruta', 'seccion':'Inventario', 'empresa':empresa, 'formset':formset, 'view':'vLiquidarOrdenRuta', 'id':orden.id}
 
 		return render(request, 'form_orden_ruta.html', c)
 
@@ -137,7 +137,7 @@ def almacenes(request, page=1):
 
 		almacenes = paginador.get_page(page)
 
-	c = {'titulo':'Lista de Almacenes', 'seccion':'Almacenes', 'empresa':empresa, 'almacenes':almacenes, 'page':page}
+	c = {'titulo':'Tabla de Almacenes', 'seccion':'Inventario', 'empresa':empresa, 'almacenes':almacenes, 'page':page}
 
 	return render(request, 'inventario/almacenes.html', c)
 
@@ -157,7 +157,7 @@ def almacen(request, _id):
 
 	ruta_delete = reverse('vEliminarAlmacen', kwargs=params)
 
-	c = {'titulo':'Datos de Almacen', 'seccion':'Almacenes', 'almacen':almacen, 'empresa':empresa, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
+	c = {'titulo':'Almacen', 'seccion':'Inventario', 'almacen':almacen, 'empresa':empresa, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
 
 	return render(request, 'inventario/ver_almacen.html')
 
@@ -175,7 +175,7 @@ def nuevo_almacen(request):
 
 		form = forms.fAlmacen()
 
-		c = {'titulo':'Ingreso de Almacen', 'seccion':'Almacenes', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Nuevo Almacen', 'seccion':'Inventario', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -222,7 +222,7 @@ def editar_almacen(request, _id):
 
 		ruta = reverse('vEditarAlmacen', kwargs={'_id':_id})
 
-		c = {'titulo':'Editar datos de almacen', 'seccion':'Almacenes', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Datos de Almacen', 'seccion':'Inventario', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -303,7 +303,7 @@ def entradas(request, page=1):
 		entradas = paginador.get_page(page)
 
 
-	c = {'titulo':'Listado de Entradas de Almacen', 'seccion':'Entradas de Almacen', 'empresa':empresa, 'entradas':entradas, 'page':page, 'almacenes':almacenes}
+	c = {'titulo':'Registro de Entradas de Productos/Materiales', 'seccion':'Inventario', 'empresa':empresa, 'entradas':entradas, 'page':page, 'almacenes':almacenes}
 
 	if almacen != None:
 		
@@ -352,7 +352,7 @@ def entradas_filtro(request, page=1):
 
 		entradas = paginador.get_page(page)
 
-	c = {'titulo':titulo, 'seccion':'Entradas de Almacen', 'empresa':empresa, 'entradas':entradas, 'page':page}
+	c = {'titulo':titulo, 'seccion':'Inventario', 'empresa':empresa, 'entradas':entradas, 'page':page}
 
 	return render(request, 'inventario/entradas.html', c)
 
@@ -373,7 +373,7 @@ def entrada(request, _id):
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	c = {'titulo':'Entrada', 'seccion':'Entradas de Almacen', 'empresa':empresa, 'entrada':entrada, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
+	c = {'titulo':'Entrada de Productos/Materiales', 'seccion':'Inventario', 'empresa':empresa, 'entrada':entrada, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
 
 	return render(request, 'inventario/ver_entrada.html', c)
 
@@ -398,7 +398,7 @@ def detalle_entrada(request, _id):
 
 		formset = DetalleFormset(instance=entrada)
 
-		c = {'titulo':'Detalle de Entrada', 'seccion':'Entradas de Almacen', 'empresa':empresa, 'formset':formset, 'ruta':ruta}
+		c = {'titulo':'Detalle de Entrada de Productos/Materiales', 'seccion':'Inventario', 'empresa':empresa, 'formset':formset, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -485,7 +485,7 @@ def form_entrada(request, _id=None):
 
 		empresa = settings.NOMBRE_EMPRESA
 
-		c = {'titulo':'Nueva Entrada de Almacen', 'seccion':'Entradas de Almacen', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Nueva Entrada de Productos/Materiales', 'seccion':'Inventario', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -652,7 +652,7 @@ def salidas(request, page=1):
 		salidas = paginador.get_page(page)
 
 
-	c = {'titulo':'Lista de Salidas', 'seccion':'Salidas de Almacen', 'empresa':empresa, 'salidas':salidas, 'page':page}
+	c = {'titulo':'Registro de Salidas de Productos/Materiales', 'seccion':'Inventario', 'empresa':empresa, 'salidas':salidas, 'page':page}
 
 	
 	if almacen != None:
@@ -702,7 +702,7 @@ def salidas_filtro(request, page=1):
 
 		salidas = paginador.get_page(page)
 
-	c = {'titulo':titulo, 'seccion':'Salidas de Almacen', 'empresa':empresa, 'salidas':salidas, 'page':page}
+	c = {'titulo':titulo, 'seccion':'Inventario', 'empresa':empresa, 'salidas':salidas, 'page':page}
 
 	return render(request, 'inventario/salidas.html', c)
 
@@ -723,7 +723,7 @@ def salida(request, _id):
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	c = {'titulo':'Salida', 'seccion':'Salidas de Almacen', 'empresa':empresa, 'salida':salida, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
+	c = {'titulo':'Salida de Productos/Materiales', 'seccion':'Inventario', 'empresa':empresa, 'salida':salida, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
 
 	return render(request, 'inventario/ver_salida.html', c)
 
@@ -770,7 +770,7 @@ def detalle_salida(request, _id):
 
 		empresa = settings.NOMBRE_EMPRESA
 
-		c = {'titulo':'Detalle de Salida', 'seccion':'Salidas de Almacen', 'empresa':empresa, 'formset':formset, 'ruta':ruta}
+		c = {'titulo':'Detalle de Salida de Productos/Materiales', 'seccion':'Inventario', 'empresa':empresa, 'formset':formset, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -832,7 +832,7 @@ def form_salida(request, _id=None):
 
 		ruta = reverse('vNuevaSalida')
 
-		c = {'titulo':'Nueva Salida', 'seccion':'Salidas de Almacen', 'empresa':empresa, 'form':form, 'ruta':ruta}
+		c = {'titulo':'Nueva Salida de Productos/Materiales', 'seccion':'Inventario', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
 		messages.info(request, "Los campos con '*' son obligatorios.")
 
@@ -862,6 +862,76 @@ def form_salida(request, _id=None):
 
 			return redirect('detalle_salida', {'_id':salida.id})
 
+
+
+@login_required
+@permission_required('inventario.view_traslado')
+def traslados(request, page=1):
+
+	limite = settings.LIMITE_FILAS
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	traslados = models.Traslado.objects.all()
+
+	if traslados.count() > limite:
+		
+		paginador = Paginator(traslados, limite)
+
+		traslados = paginador.get_page(page)
+
+	c = {'titulo':'Registro de Traslados', 'seccion':'Inventario', 'empresa':empresa, 'traslados':traslados, 'page':page}
+
+	return render(request, 'inventario/traslados.html', c)
+
+
+
+@login_required
+@permission_required('inventario.view_traslado')
+def traslado(request, _id):
+
+	traslado = get_object_or_404(models.Traslado, pk=_id)
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	params = {'_id':_id}
+
+	ruta_edit = reverse('vEditarTraslado', kwargs=params)
+
+	ruta_delete = reverse('vEliminarTraslado', kwargs=params)
+
+	c = {'titulo':'Traslado Entre Almacenes', 'seccion':'Inventario', 'empresa':empresa, 'traslado':traslado, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
+
+	return render(request, 'inventario/ver_traslado.html', c)
+
+
+
+@login_required
+@permission_required(['inventario.add_detalletraslado','inventario.change_detalletraslado'])
+def detalle_traslado(request, _id):
+
+	traslado = get_object_or_404(models.Traslado, pk=_id)
+
+	extra_row = 4 if traslado.detalletraslado_set > 0 else 10
+
+	DetalleFormset = inlineformset_factory(models.Traslado, models.DetalleTraslado, form=forms.fDetalleTraslado, extra=extra_row)
+
+	ruta = reverse('vDetalleTraslado', kwargs={'_id':_id})
+
+	if request.method == 'GET':
+		
+		formset = DetalleFormset(instance=traslado)
+
+		empresa = settings.NOMBRE_EMPRESA
+
+		c = {'titulo':'Detalle de Traslado Entre Almacenes','seccion':'Inventario', 'formset':formset, 'ruta':ruta, 'empresa':empresa}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/inline_formset_template', c)
+
+	elif request.method == 'POST':
+		pass
 
 
 

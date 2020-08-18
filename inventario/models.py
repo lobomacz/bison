@@ -8,7 +8,7 @@ from bison.ventas.models import Vendedor
 
 class Almacen(models.Model):
 	"""Modelo de datos para Almacenes"""
-	cuenta = models.ForeignKey(Cuenta, on_delete=models.SET_NULL, null=True)
+	cuenta = models.ForeignKey(Cuenta, on_delete=models.SET_NULL)
 	descripcion = models.CharField(max_length=400)
 	ubicacion = models.CharField(max_length=250)
 	tipo_almacen = models.CharField(choices=[('temp', 'temporal'), ('perm', 'permanente')])
@@ -22,6 +22,20 @@ class Almacen(models.Model):
 		permissions = [
 			('add_asiento', 'Ingresa Asientos Contables')
 		]
+
+
+class DetalleAlmacen(models.Model):
+	"""Detalle o Kardex de Almacen"""
+	almacen = models.ForeignKey(Almacen, on_delete=models.CASCADE)
+	producto = models.ForeignKey(Producto, on_delete=models.PROTECT)
+	unidad_medida = models.ForeignKey(Unidad, on_delete=models.PROTECT)
+	cantidad = models.DecimalField(max_digits=6, decimal_places=2)
+	costo_unit = models.DecimalField(max_digits=6, decimal_places=2)
+	total = models.DecimalField(max_digits=6, decimal_places=2)
+	ultimo_update = models.DateTimeField()
+
+	class Meta:
+		ordering = ['almacen', 'producto']
 
 
 class Entrada(models.Model):
@@ -46,6 +60,7 @@ class DetalleEntrada(models.Model):
 	cantidad = models.DecimalField(max_digits=6, decimal_places=2)
 	costo_unit = models.DecimalField(max_digits=6, decimal_places=2)
 	total = models.DecimalField(max_digits=6, decimal_places=2)
+	
 	
 class Salida(models.Model):
 	"""Modelo de datos para SalidaAlmacen"""

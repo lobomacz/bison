@@ -65,7 +65,6 @@ class fDetalleTraslado(forms.ModelForm):
 		widgets = {'traslado':forms.HiddenInput}
 
 
-
 class fEntregaOrdenRuta(forms.ModelForm):
 
 	class Meta:

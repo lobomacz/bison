@@ -396,7 +396,7 @@ def ver_factura(request, _id):
 
 
 @login_required
-@permission_required(['ventas.change_factura', 'ventas.change_detallefactura', 'ventas.add_detallefactura'])
+@permission_required(['ventas.add_factura', 'ventas.change_factura', 'ventas.change_detallefactura', 'ventas.add_detallefactura'])
 def detalle_factura(request, _id, _ido=None):
 
 	factura = get_object_or_404(models.Factura, pk=_id)
@@ -484,7 +484,7 @@ def detalle_factura(request, _id, _ido=None):
 
 
 @login_required
-@permission_required('ventas.change_factura')
+@permission_required('ventas.delete_detallefactura')
 def eliminar_detalle_factura(request, _id, _idd):
 
 	if request.method == "POST":
