@@ -22,7 +22,7 @@ class fEntrada(forms.ModelForm):
 
 	class Meta:
 		model = models.Entrada 
-		exclude = ['id']
+		exclude = ['id', 'digitador']
 
 
 
@@ -39,7 +39,7 @@ class fSalida(forms.ModelForm):
 
 	class Meta:
 		model = models.Salida 
-		exclude = ['id']
+		exclude = ['id', 'digitador']
 
 
 class fDetalleSalida(forms.ModelForm):

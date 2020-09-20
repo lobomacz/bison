@@ -413,6 +413,8 @@ def detalle_entrada(request, _id):
 			try:
 				with transaction.atomic():
 
+					almacen = entrada.almacen
+
 					for form in formset.forms:
 						
 						detalle = form.save(commit=False)
@@ -423,7 +425,37 @@ def detalle_entrada(request, _id):
 
 						detalle.total = detalle.cantidad * detalle.costo_unit
 
+						detalle_almacen = almacen.detallealmacen_set.filter(producto__id=detalle.producto.id)
+
+						if detalle_almacen.id == None:
+							
+							detalle_almacen = DetalleAlmacen()
+
+							detalle_almacen.almacen = almacen
+
+							detalle_almacen.producto = detalle.producto
+
+							detalle_almacen.unidad_medida = detalle.unidad_medida
+
+							detalle_almacen.cantidad = detalle.cantidad
+
+							detalle_almacen.costo_unit = detalle.costo_unit
+
+							detalle_almacen.total = detalle_almacen.cantidad * detalle_almacen.costo_unit
+
+						else:
+
+							detalle_almacen.cantidad += detalle.cantidad
+
+							detalle_almacen.total = detalle_almacen.cantidad * detalle_almacen.costo_unit
+
+							if detalle_almacen.cantidad > detalle_almacen.producto.maximo:
+								
+								messages.warning(request, "{} rebasa el máximo de existencia permitido.".format(detalle_almacen.producto))
+
 						detalle.save()
+
+						detalle_almacen.save()
 
 			except DatabaseError:
 				
@@ -454,15 +486,23 @@ def eliminar_detalleEntrada(request, _id):
 
 			return redirect('ver_entrada', {'_id':entrada.id})
 
-		detalle.delete()
+		if entrada.digitador.usuario == request.user:
 
-		return redirect('ver_entrada', {'_id':entrada.id})
+			detalle.delete()
+
+			messages.success(request, "El detalle se eliminó con éxito.")
+
+		else:
+
+			messages.warning(request, "La entrada no corresponde al usuario activo.")
+
+		return redirect('entrada', {'_id':_id})
 	
 
 
 
 @login_required
-@permission_required('inventario.add_entrada')
+@permission_required(['inventario.add_entrada', 'inventario.change_entrada'])
 def form_entrada(request, _id=None):
 
 	registro = get_object_or_404(models.Entrada, pk=_id) if _id != None else None
@@ -479,9 +519,7 @@ def form_entrada(request, _id=None):
 		
 		form = forms.fEntrada() if _id == None else forms.fEntrada(registro)
 
-		params = {'_id':_id} if _id != None else {}
-
-		ruta = reverse('vNuevaEntrada', kwargs=params) 
+		ruta = reverse('vNuevaEntrada') if _id == None else reverse('vEditarEntrada', kwargs={'_id':_id})
 
 		empresa = settings.NOMBRE_EMPRESA
 
@@ -495,9 +533,11 @@ def form_entrada(request, _id=None):
 		
 		form = forms.fEntrada(request.POST) if _id == None else forms.fEntrada(request.POST, instance=registro)
 
-		if form. is_valid():
+		if form.is_valid():
 
 			entrada = form.save(commit=False)
+
+			entrada.digitador = request.user.empleado
 
 			entrada.save()
 
@@ -535,7 +575,26 @@ def eliminar_entrada(request, _id):
 
 				return redirect('entrada', {'_id':_id})
 
-		entrada.delete()
+		if entrada.digitador.usuario == request.user:
+
+			try:
+				with transaction.atomic():
+
+					entrada.asiento.delete()
+
+					entrada.delete()
+
+			except DatabaseError:
+
+				messages.error(request, "Ocurrió un problema al eliminar la entrada.")
+
+				return redirect('entrada', {'_id':_id})
+
+		else:
+
+			messages.warning(request, "La entrada no corresponde al usuario activo.")
+
+			return redirect('entrada', {'_id':_id})
 
 		return redirect('entradas')
 
@@ -730,6 +789,22 @@ def salida(request, _id):
 
 
 @login_required
+@permission_required('inventario.delete_salida')
+def eliminar_salida(request, _id):
+	
+	if request.method == "POST":
+		
+		salida = get_object_or_404(models.Salida, pk=_id)
+
+		salida.delete()
+
+		messages.success(request, "El registro se eliminó con éxito.")
+
+		return redirect('salidas')
+
+
+
+@login_required
 @permission_required('inventario.delete_detalleSalida')
 def eliminar_detallesalida(request, _id):
 
@@ -785,6 +860,8 @@ def detalle_salida(request, _id):
 			try:
 				with transaction.atomic():
 
+					almacen = salida.almacen
+
 					for form in formset.forms:
 						
 						detalle = form.save(commit=False)
@@ -795,7 +872,29 @@ def detalle_salida(request, _id):
 
 						detalle.total = detalle.cantidad * detalle.costo_unit
 
+						detalle_almacen = almacen.detallealmacen_set.filter(producto__id=detalle.producto.id)
+
+						if detalle_almacen.id == None:
+
+							raise FieldError("{} no se encuentra en existencia en almacen.".format(detalle_almacen.producto))
+
+						else:
+
+							if detalle_almacen.cantidad < detalle.cantidad:
+								
+								raise FieldError("La cantidad de {} en existencia es menor a lo solicitado.".format(detalle_almacen.producto))
+
+							detalle_almacen.cantidad -= detalle.cantidad
+
+							detalle_almacen.total = detalle_almacen.cantidad * detalle_almacen.costo_unit
+
+							if detalle_almacen.cantidad < detalle_almacen.producto.minimo:
+								
+								messages.warning(request, "{} está debajo del mínimo de existencia permitido.".format(detalle_almacen.producto))
+
 						detalle.save()
+
+						detalle_almacen.save()
 
 
 			except DatabaseError:
@@ -803,6 +902,13 @@ def detalle_salida(request, _id):
 				messages.error(request, "Ocurrió un error al registrar los datos. Intentelo de nuevo.")
 
 				return redirect(ruta)
+
+			except FieldError as fe:
+
+				messages.error(request, "%s" % (fe))
+
+				return redirect(ruta)
+
 
 			messages.success(request, "Los datos se registraron con éxito.")
 
@@ -830,7 +936,7 @@ def form_salida(request, _id=None):
 
 		empresa = settings.NOMBRE_EMPRESA
 
-		ruta = reverse('vNuevaSalida')
+		ruta = reverse('vNuevaSalida') if _id == None else reverse('vEditarSalida', kwargs={'_id':_id})
 
 		c = {'titulo':'Nueva Salida de Productos/Materiales', 'seccion':'Inventario', 'empresa':empresa, 'form':form, 'ruta':ruta}
 
@@ -845,6 +951,8 @@ def form_salida(request, _id=None):
 		if form.is_valid():
 			
 			salida = form.save(commit=False)
+
+			salida.digitador = request.user.empleado
 
 			salida.save()
 
@@ -931,7 +1039,77 @@ def detalle_traslado(request, _id):
 		return render(request, 'core/forms/inline_formset_template', c)
 
 	elif request.method == 'POST':
-		pass
+		
+		formset = DetalleFormset(request.POST, request.FILES, instance=traslado)
+
+		if formset.is_valid():
+			
+			try:
+				with transaction.atomic():
+
+					almacen_origen = traslado.origen 
+
+					almacen_destino = traslado.destino 
+
+					for form in formset.forms:
+						
+						detalle_traslado = form.save(commit=False)
+
+						detalle_origen = almacen_origen.detallealmacen_set.filter(producto__id=detalle_traslado.producto.id)
+
+						if detalle_origen.cantidad < detalle_traslado.cantidad:
+							
+							raise FieldError("La existencia de {} es menor que lo solicitado.".format(detalle_origen.producto))
+
+						detalle_origen.cantidad -= detalle_traslado.cantidad
+
+						detalle_origen.total = detalle_origen.cantidad * detalle_origen.costo_unit
+
+						detalle_destino = almacen_destino.detallealmacen_set.filter(producto__id=detalle_traslado.producto.id)
+
+						if detalle_destino.id == None:
+							
+							detalle_destino = models.DetalleAlmacen()
+
+							detalle_destino.almacen = almacen_destino
+
+							detalle_destino.producto = detalle_traslado.producto
+
+							detalle_destino.unidad_medida = detalle_traslado.unidad_medida
+
+							detalle_destino.cantidad = detalle_traslado.cantidad
+
+							detalle_destino.costo_unit = detalle_traslado.costo_unit
+
+							detalle_destino.total = detalle_destino.cantidad * detalle_destino.costo_unit
+
+						else:
+
+							detalle_destino.cantidad += detalle_traslado.cantidad
+
+							detalle_destino.total = detalle_destino.cantidad * detalle_destino.costo_unit
+
+						detalle_traslado.save()
+
+						detalle_origen.save()
+
+						detalle_destino.save()
+						
+			except DatabaseError:
+				
+				messages.error(request, "Ocurrió un problema al ingresar los datos.")
+
+				return redirect(ruta)
+
+			except FieldError as fe:
+
+				messages.error(request, "%s" % (fe))
+
+				return redirect(ruta)
+
+			messages.success(request, "Los datos se registraron con éxito.")
+
+			return redirect('traslado', {'_id':traslado.id})
 
 
 

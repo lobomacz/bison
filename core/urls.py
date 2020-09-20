@@ -27,17 +27,18 @@ urlpatterns = [
 		path('<int:_id>/eliminar/', views.eliminar_usuario, name='vEliminarUsuario'),
 		path('<int:_id>/desactivar/', views.desactivar_usuario, name='vDesactivaUsuario'),
 		])),
-	path('categorias/', include([
-		path('page/<int:page>/', views.lista_categorias, name='vListaCategorias'),
-		path('nuevo/', views.nueva_categoria, name='vNuevaCategoria'),
-		path('<int:_id>/editar/', views.editar_categoria, name='vEditarCategoria'),
-		path('<int:_id>/eliminar/', views.eliminar_categoria, name='vEliminarCategoria'),
+	path('tablas/', include([
+		path('', views.tablas, name='vTablas'),
+		path('nuevo/', views.nueva_tabla, name='vNuevaTabla'),
+		path('<int:_id>/editar/', views.tablas, name='vEditarTabla'),
+		path('<int:_id>/actualizar/', views.update_tabla, name='vUpdateTabla'),
+		path('<int:_id>/eliminar/', views.eliminar_tabla, name='vEliminarTabla'),
 		])),
-	path('medidas/', include([
-		path('page/<int:page>/', views.lista_medidas, name='vListaMedidas'),
-		path('nuevo/', views.nueva_medida, name='vNuevaMedida'),
-		path('<int:_id>/editar/', views.editar_medida, name='vEditarMedida'),
-		path('<int:_id>/eliminar/', views.eliminar_medida, name='vEliminarMedida'),
+	path('detalle-tabla/', include([
+		path('<int:_id>/nuevo/', views.nuevo_detalle_tabla, name='vNuevoDetalleTabla'),
+		path('<int:_idd>/editar/', views.tablas, name='vEditarDetalleTabla'),
+		path('<int:_id>/actualizar/', views.update_detalle_tabla, name='vUpdateDetalleTable'),
+		path('<int:_id>/eliminar/', views.eliminar_detalle_tabla, name='vEliminarDetalleTabla'),
 		])),
 	path('productos/', include([
 		path('page/<int:page>/', views.lista_productos, name='vListaProductos'),
@@ -45,13 +46,6 @@ urlpatterns = [
 		path('nuevo/', views.nuevo_producto, name='vNuevoProducto'),
 		path('<int:_id>/editar/', views.editar_producto, name='vEditarProducto'),
 		path('<int:_id>/eliminar/', views.eliminar_producto, name='vEliminarProducto'),
-		])),
-	path('camiones/', include([
-		path('', views.lista_camiones, name='vListaCamiones'),
-		path('nuevo/', views.nuevo_camion, name='vNuevoCamion'),
-		path('<int:_id>/ver/', views.ver_camion, name='vVerCamion'),
-		path('<int:_id>/editar/', views.editar_camion, name='vEditarCamion'),
-		path('<int:_id>/eliminar/', views.eliminar_camion, name='vEliminarCamion'),
 		])),
 	#path('error/', views.error, name='vError'),
 ]

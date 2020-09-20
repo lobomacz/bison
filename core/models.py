@@ -41,20 +41,6 @@ class Empleado(models.Model):
 		return reverse('vVerEmpleado', {'_id':self.cedula})
 
 
-'''
-class Categoria(models.Model):
-
-	nombre = models.CharField(max_length=45)
-
-	class Meta:
-		permissions = [
-			('administrar_categoria', 'Puede administrar categorias de productos.'),
-		]
-
-	def __str__(self):
-		return self.nombre
-'''
-
 		
 
 class Producto(models.Model):
@@ -75,29 +61,7 @@ class Producto(models.Model):
 
 	def __str__(self):
 
-		return self.nombre
-
-
-'''
-class Unidad(models.Model):
-
-	nombre = models.CharField(max_length=25)
-	simbolo = models.CharField(max_length=8)
-	unidad_base = models.BooleanField()
-
-	class Meta:
-		ordering = ['nombre']
-		verbose_name = "Unidad de Medida"
-		verbose_name_plural = "Unidades de Medida"
-		permissions = [
-			('administrar_unidad', 'Puede administrar las unidades de medida.'),
-		]
-
-	def __str__(self):
-
-		return self.nombre
-
-'''
+		return self.nombre.upper()
 
 
 
@@ -116,30 +80,19 @@ class Conversion(object):
 		
 
 
-class Camion(models.Model):
-	"""Modelo de datos para Camion"""
-	descripcion = models.CharField(max_length=45, verbose_name='descripción')
-	tonelaje = models.IntegerField(default=2)
-	anno = models.CharField(verbose_name='año', max_length=4, min_length=4)
-	seguro_hasta = models.DateField(verbose_name='seguro vence')
-	placa = models.CharField(max_length=10)
-	cuenta = models.ForeignKey(Cuenta, on_delete=models.PROTECT, on_update=models.CASCADE)
-	habilitado = models.BooleanField()
-
-	def __str__(self):
-
-		return '{0} {1} Placa: {2}'.format(self.descripcion, self.anno, self.placa)
-
-
 class Tabla(models.Model):
 	"""Modelo de tablas generales"""
 	tabla = models.CharField(max_length=100)
+
+	class Meta:
+		ordering = ['tabla']
 
 	def __str__(self):
 		return self.tabla.upper() + 'S'
 
 
-class TablaDetalle(models.Model):
+
+class DetalleTabla(models.Model):
 	"""Modelo de detalle de tablas generales"""
 	tabla = models.ForeignKey(Tabla, on_delete=models.CASCADE)
 	elemento = models.CharField(max_length=150)

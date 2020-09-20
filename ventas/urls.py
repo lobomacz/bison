@@ -81,5 +81,10 @@ urlpatterns = [
 		path('<int:_id>/ver/', views.ver_ruta, name='vVerRuta'),
 		path('<int:_id>/editar/', views.editar_ruta, name='vEditarRuta'),
 		path('<int:_id>/eliminar/', views.eliminar_ruta, name='vEliminarRuta'),
+		path('camiones/', views.lista_camiones, name='vListaCamiones'),
+		path('camiones/nuevo/', views.nuevo_camion, name='vNuevoCamion'),
+		path('camiones/<int:_id>/ver/', views.ver_camion, name='vVerCamion'),
+		path('camiones/<int:_id>/editar/', views.editar_camion, name='vEditarCamion'),
+		path('camiones/<int:_id>/eliminar/', views.eliminar_camion, name='vEliminarCamion'),
 		])),
 ]

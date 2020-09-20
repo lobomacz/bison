@@ -34,6 +34,7 @@ class Factura(models.Model):
 	class Meta:
 		ordering = ['no_documento', 'fecha']
 		permissions = [
+			('view_all_factura', 'Ver todas las facturas'),
 			('anular_factura', 'Anular facturas'),
 			('cancelar_factura', 'Cancelar facturas'),
 			('asiento_factura', 'Asiento de facturas'),
@@ -66,7 +67,7 @@ class Proforma(models.Model):
 	fecha = models.DateField()
 	cliente = models.ForeignKey('Cliente', on_delete=models.SET_NULL, null=True)
 	vendedor = models.ForeignKey('Vendedor', on_delete=models.SET_NULL, null=True)
-	valida = models.BooleanField(default=True)
+	vigente = models.BooleanField(default=True)
 	anulado = models.BooleanField(default=False)
 	anulado_por = models.ForeignKey(Empleado, on_delete=models.PROTECT, null=True)
 	descuento = models.DecimalField(max_digits=6, decimal_places=2, default=0.00)
@@ -78,6 +79,7 @@ class Proforma(models.Model):
 	class Meta:
 		ordering = ['fecha', 'cliente']
 		permissions = [
+			('view_all_proforma', 'Ver todas las proformas'),
 			('anular_proforma', 'Anular proformas'),
 			('imprimir_proforma', 'Imprimir proformas'),
 		]
@@ -130,6 +132,29 @@ class Ruta(models.Model):
 
 	def __str__(self):
 		return self.descripcion
+
+
+class Camion(models.Model):
+	"""Modelo de datos para Camion"""
+	descripcion = models.CharField(max_length=45, verbose_name='descripción')
+	tonelaje = models.IntegerField(default=2)
+	anno = models.CharField(verbose_name='año', max_length=4, min_length=4)
+	seguro_hasta = models.DateField(verbose_name='seguro vence')
+	placa = models.CharField(max_length=10)
+	ruta = models.ForeignKey(Ruta, on_delete=models.CASCADE)
+	cuenta = models.ForeignKey(Cuenta, on_delete=models.CASCADE, on_update=models.CASCADE)
+	habilitado = models.BooleanField()
+
+	class Meta:
+
+		constraints = [
+			UniqueConstraint(fields=['cuenta'], name='unique_cuenta_camion')
+		]
+
+	def __str__(self):
+
+		return '{0} {1} Placa: {2}'.format(self.descripcion, self.anno, self.placa)
+
 		
 
 

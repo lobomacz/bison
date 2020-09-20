@@ -566,254 +566,230 @@ def desactivar_usuario(request, _id):
 		
 
 
-# ADMINISTRAR CATEGORIAS DE PRODUCTOS
+# ADMINISTRAR MAESTRO DE TABLAS GENERALES
 
 @login_required
-@permission_required('core.view_categoria')
-def lista_categorias(request, page):
+@permission_required('core.view_tabla')
+def tablas(request, _id=None, _idd=None):
 
 	empresa = settings.NOMBRE_EMPRESA
 
-	limite = settings.LIMITE_FILAS
+	tablas = models.Tabla.objects.all()
 
-	categorias = models.Categoria.objects.all()
+	detalles = models.DetalleTabla.objects.all()
 
-	if categorias.count() > limite:
+	tabla = None
 
-		paginador = Paginator(categorias, limite)
+	detalletabla = None
 
-		categorias = paginador.get_page(page)
 
-	c = {'titulo':'Maestro de Categorias', 'seccion':'Categorias', 'empresa':empresa, 'categorias':categorias}
+	# Si _id no es None, se va a editar Tabla
+	# Se carga la tabla del _id y los detalles relacionados
+	# Si _idd no es None, se va a editar un DetalleTabla
+	# Se carga el detalle, se obtiene la tabla padre y se llena la lista de detalles
+	if _id != None:
 
-	return render(request, 'core/lista_categorias.html', c)
+		tablas = models.Tabla.objects.filter(pk=_id)
+
+		detalles = models.DetalleTabla.objects.filter(tabla__id=_id)
+
+		tabla = tablas.first()
+
+	elif _idd != None:
+
+		detalles = models.DetalleTabla.objects.filter(pk=_idd)
+
+		detalle = detalles.first()
+
+		tablas = models.Tabla.objects.filter(pk=detalle.tabla.id)
+
+	c = {
+	'titulo':'Maestro de Tablas', 
+	'seccion':'Tablas', 
+	'empresa':empresa, 
+	'tablas':tablas,
+	'detalles':detalles,
+	'tabla':tabla,
+	'detalle':detalle
+	}
+
+	return render(request, 'core/index_tablas.html', c)
 
 
 @login_required
-@permission_required('core.add_categoria')
-def nueva_categoria(request):
+@permission_required('core.add_tabla')
+def nueva_tabla(request):
 
-	CategoriaFormSet = modelformset_factory(models.Categoria, form=forms.CategoriaForm, extra=3)
+	if request.method == "POST": 
 
-	if request.method == "GET":
+		tabla = models.Tabla(request.POST)
 
-		empresa = settings.NOMBRE_EMPRESA
-
-		formset = CategoriaFormSet()
-
-		ruta = reverse('vNuavaCategoria')
-
-		c = {'titulo':'Ingreso de Categorias', 'seccion':'Categorias', 'empresa':empresa, 'formset':formset, 'ruta':ruta}
-
-		messages.info(request, 'Los campos con * son obligatorios')
-		
-		return render(request, 'core/forms/formset_template.html', c)
-
-	elif request.method == "POST": # Pendiente de mejorar con bloque try/except
-
-		formset = CategoriaFormSet(request.POST)
-
-		if formset.is_valid():
+		if tabla.is_valid():
 
 			try:
 				
-				formset.save()
+				tabla.save()
 
 			except Exception as e:
 				
-				messages.error(request,"Excepción al ingresar categorias")
+				messages.error(request,"Excepción al ingresar tabla.")
 
 				logging.error(e)
 
-				return redirect(reverse('vError'))
+				return redirect('tablas')
 			
 			messages.success(request, 'Los datos se ingresaron con éxito')
 
-			return redirect('lista_categorias', {'page':1})
+			return redirect('tablas')
 		
 
 
 @login_required
-@permission_required('core.change_categoria')
-def editar_categoria(request, _id):
+@permission_required('core.change_tabla')
+def update_tabla(request, _id):
 
-	categoria = get_object_or_404(models.Categoria, pk=_id)
+	tabla = get_object_or_404(models.Tabla, pk=_id)
 
-	if request.method == "GET":
+	if request.method == "POST": 
 
-		form = forms.EditCategoriaForm(categoria)
+		tabla.tabla = request.POST.get('tabla')
 
-		empresa = settings.NOMBRE_EMPRESA
-
-		ruta = reverse('vEditarCategoria', kwargs={'_id':_id})
-
-		c = {'titulo':'Edición de Categorías', 'seccion':'Categorías', 'form':form, 'empresa':empresa, 'ruta':ruta}
-
-		messages.info(request, 'Los campos con * son obligatorios')
-		
-		return render(request, 'core/forms/form_template.html', c)
-
-	elif request.method == "POST": # Pendiente de mejorar con bloque try/except
-
-		form = forms.EditCategoriaForm(request.POST, instance=categoria)
-
-		if form.is_valid():
+		if tabla.is_valid():
 
 			try:
 				
-				form.save()
+				tabla.save()
 
 			except Exception as e:
 				
-				messages.error(request,"Excepción al actualizar categoria")
+				messages.error(request,"Excepción al actualizar tabla")
 
 				logging.error(e)
 
-				return redirect(reverse('vError'))
+				return redirect(reverse('vTablas', kwargs={'_id':_id}))
 			
 			messages.success(request, 'El registro se actualizó con éxito')
 
-			return redirect('lista_categorias', {'page':1})
+			return redirect('tablas')
 		
 
 
 @login_required
-@permission_required('core.delete_categoria')
-def eliminar_categoria(request, _id):
+@permission_required('core.delete_tabla')
+def eliminar_tabla(request, _id):
 
-	if request.method == "POST": # Pendiente de mejorar con bloque try/except
+	if request.method == "POST": 
 
 		categoria = get_object_or_404(models.Categoria, pk=_id)
 
-		categoria.delete()
+		try:
 
-		return redirect('lista_categorias', {'page':1})
+			categoria.delete()
+
+		except Exception as e:
+
+			messages.error(request, "Excepción al eliminar tabla.")
+			
+			logging.error(e)
+
+			return redirect('tablas')
+
+		messages.success(request, "Registro eliminado con éxito.")
+
+		return redirect('tablas')
 
 
-# ADMINISTRAR UNIDADES DE MEDIDA
+# ADMINISTRAR DETALLE DE TABLA
 
 @login_required
-@permission_required('core.view_unidad')
-def lista_medidas(request, page=1):
+@permission_required('core.add_detalle_tabla')
+def nuevo_detalle_tabla(request, _id):
 
-	empresa = settings.NOMBRE_EMPRESA
+	tabla = get_object_or_404(models.Tabla, pk=_id)
 
-	limite = settings.LIMITE_FILAS
+	if request.method == "POST":
+		
+		detalle = models.DetalleTabla(request.POST)
 
-	unidades = models.Unidad.objects.all() #get_list_or_404(models.Unidad)
+		if detalle.is_valid():
+			
+			try:
 
-	if unidades.count() > limite:
+				detalle.tabla = tabla
+				
+				detalle.save()
 
-		paginador = Paginator(unidades, limite)
+			except Exception as e:
+				
+				logging.error(e)
 
-		unidades = paginador.get_page(page)
+				messages.error(request, "Excepción al ingresar detalle de tabla.")
 
-	c = {'titulo':'Maestro de Unidad de Medida', 'seccion':'Unidades de Medida', 'empresa':empresa, 'unidades':unidades}
-	
-	return render(request, 'core/lista_unidades.html', c)
+				return redirect('tablas', {'_id':_id})
+			
+			messages.success(request, "El registro se ingresó con éxito.")
+
+			return redirect('tablas', {'_id':_id})
 
 
 @login_required
 @permission_required(['core.add_unidad'])
-def nueva_medida(request):
+def update_detalle_tabla(request, _id):
 
-	UnidadFormSet = modelformset_factory(models.Unidad, form=forms.UnidadForm, extra=3)
-
-	if request.method == "GET":
-
-		empresa = settings.NOMBRE_EMPRESA
-
-		formset = UnidadFormSet()
-
-		ruta = reverse('vNuevaMedida')
-
-		c = {'titulo':'Ingreso de Unidad de Medida', 'seccion':'Unidades de Medida', 'empresa':empresa, 'formset':formset, 'ruta':ruta}
-
-		messages.info(request, 'Los campos con * son obligatorios')
-		
-		return render(request, 'core/forms/formset_template.html', c)
-
-	elif request.method == "POST": # Pendiente de mejorar con bloque try/except
-
-		formset = UnidadFormSet(request.POST)
-
-		if formset.is_valid():
-
-			try:
-				
-				formset.save()
-
-			except Exception as e:
-				
-				messages.error(request,"Excepción al ingresar categorias")
-
-				logging.error(e)
-
-				return redirect(reverse('vError'))
-			
-			messages.success(request, 'Los datos se ingresaron con éxito')
-
-			return redirect('lista_medidas', {'page':1})
-
-			
-		
-
-@login_required
-@permission_required('core.change_unidad')
-def editar_medida(request, _id):
-
-	unidad = get_object_or_404(models.Unidad, pk=_id)
-
-	if request.method == "GET":
-
-		form = forms.EditUnidadForm(unidad)
-
-		empresa = settings.NOMBRE_EMPRESA
-
-		ruta = reverse('vEditarMedida', kwargs={'_id':_id})
-
-		c = {'titulo':'Edición de Unidad de Medida', 'seccion':'Unidades de Medida', 'form':form, 'empresa':empresa, 'ruta':ruta}
-
-		messages.info(request, 'Los campos con * son obligatorios')
-		
-		return render(request, 'core/forms/form_template.html', c)
-
-	elif request.method == "POST": # Pendiente de mejorar con bloque try/except
-
-		form = forms.EditUnidadForm(request.POST, instance=unidad)
-
-		if form.is_valid():
-
-			try:
-				
-				form.save()
-
-			except Exception as e:
-				
-				messages.error(request,"Excepción al actualizar categoria")
-
-				logging.error(e)
-
-				return redirect(reverse('vError'))
-			
-			messages.success(request, 'El registro se actualizó con éxito')
-
-			return redirect('lista_medidas', {'page':1})
-
-
-		
-
-@login_required
-@permission_required('core.delete_unidad')
-def eliminar_medida(request, _id):
-	
 	if request.method == "POST": # Pendiente de mejorar con bloque try/except
 
-		unidad = get_object_or_404(models.Unidad, pk=_id)
+		detalle = get_object_or_404(models.DetalleTabla, pk=_id)
 
-		unidad.delete()
+		datos = request.POST
 
-		return redirect('lista_medidas', {'page':1})
+		detalle.elemento = datos.get('elemento')
+		
+		detalle.codigo_equivalencia = datos.get('codigo_equivalencia')
+
+		if detalle.is_valid():
+
+			try:
+				
+				detalle.save()
+
+			except Exception as e:
+				
+				messages.error(request,"Excepción al actualizar detalle de tabla.")
+
+				logging.error(e)
+
+				return redirect('tablas', {'_idd':_id})
+			
+			messages.success(request, 'Los datos se actualizaron con éxito')
+
+			return redirect('tablas')
+
+
+		
+
+@login_required
+@permission_required('core.delete_detalle_tabla')
+def eliminar_detalle_tabla(request, _id):
+	
+	if request.method == "POST": 
+
+		detalle = get_object_or_404(models.DetalleTabla, pk=_id)
+
+		try:
+			
+			detalle.delete()
+
+		except Exception as e:
+			
+			logging.error(e)
+
+			messages.error(request, "Excepción al eliminar detalle de tabla.")
+
+			return redirect('tablas')
+
+		messages.success(request, "El registro se eliminó con éxito.")
+
+		return redirect('tablas')
 
 
 @login_required
@@ -935,121 +911,6 @@ def eliminar_producto(request, _id):
 
 	return redirect('lista_productos')
 	
-
-
-@login_required
-@permission_required('core.view_camion')
-def lista_camiones(request):
-
-	camiones = models.Camion.objects.all()
-
-	empresa = settings.NOMBRE_EMPRESA
-
-	c = {'titulo':'Lista de Camiones', 'seccion':'Camiones' 'empresa':empresa, 'camiones':camiones}
-
-	return render(request, 'core/lista_camiones.html', c)
-
-
-
-@login_required
-@permission_required('core.view_camion')
-def ver_camion(request, _id):
-
-	camion = get_object_or_404(models.Camion, pk=_id)
-
-	empresa = settings.NOMBRE_EMPRESA
-
-	params = {'_id':_id}
-
-	ruta_edit = reverse('vEditarCamion', kwargs=params)
-
-	ruta_delete = reverse('vEliminarCamion', kwargs=params)
-
-	c = {'titulo':'Datos de Camión', 'seccion':'Camiones', 'empresa':empresa, 'camion':camion, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
-
-	return render(request, 'ver_camion.html', c)
-
-
-@login_required
-@permission_required('core.add_camion')
-def nuevo_camion(request):
-
-	if request.method == "GET":
-		
-		empresa = settings.NOMBRE_EMPRESA
-
-		form = forms.fCamion()
-
-		ruta = reverse('vNuevoCamion')
-
-		c = {'titulo':'Ingreso de Camion', 'seccion':'Camiones', 'empresa':empresa, 'form':form, 'ruta':ruta}
-
-		messages.info(request, "Los campos con '*' son obligatorios.")
-
-		return render(request, 'core/forms/form_template.html', c)
-
-	elif request.method == "POST":
-		
-		form = forms.fCamion(request.POST)
-
-		if form.is_valid():
-			
-			camion = form.save(commit=False)
-
-			camion.save()
-
-			messages.success(request, "Los datos se registraron con éxito.")
-
-			return redirect('ver_camion', {'_id':camion.id})
-
-
-@login_required
-@permission_required('core.change_camion')
-def editar_camion(request, _id):
-
-	camion = get_object_or_404(models.Camion, pk=_id)
-
-	if request.method == "GET":
-		
-		empresa = settings.NOMBRE_EMPRESA
-
-		form = forms.fCamion(camion)
-
-		ruta = reverse('vEditarCamion', kwargs={'_id':_id})
-
-		c = {'titulo':'Editar Datos de Camion', 'seccion':'Camiones', 'empresa':empresa, 'form':form, 'ruta':ruta}
-
-		messages.info(request, "Los campos con '*' son obligatorios.")
-
-		return render(request, 'core/forms/form_template.html', c)
-
-	elif request.method == "POST":
-		
-		form = forms.fCamion(request.POST, instance=camion)
-
-		if form.is_valid():
-			
-			form.save()
-
-			messages.success(request, "Los datos se actualizaron con éxito.")
-
-			return redirect('ver_camion', {'_id':_id})
-
-
-
-@login_required
-@permission_required('core.delete_camion')
-def eliminar_camion(request, _id):
-
-	if request.method == "POST":
-		
-		camion = get_object_or_404(models.Camion, pk=_id)
-
-		camion.delete()
-
-		messages.success(request, "El registro se eliminó con éxito.")
-
-		return redirect('lista_camiones')
 
 
 

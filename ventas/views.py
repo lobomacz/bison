@@ -37,45 +37,6 @@ def index(request):
 	return render(request, 'indice.html', c)
 
 
-@login_required
-@permission_required('ventas.view_factura')
-def lista_facturas(request, page=1, inicio=None, final=None):
-
-	facturas = None
-
-	empresa = settings.NOMBRE_EMPRESA
-
-	c = {'empresa':empresa, 'seccion':'Ventas', 'titulo':'Lista de Facturas', 'page':page}
-
-	limite = settings.LIMITE_FILAS
-
-	if inicio == None and final == None:
-		
-		periodo = models.Periodo.objects.get(activo=True)
-
-		facturas = models.Factura.objects.filter(fecha__gte=periodo.fecha_inicio, fecha__lte=periodo.fecha_final)
-
-		c['periodo'] = periodo
-
-	else:
-
-		facturas = models.Factura.objects.filter(fecha__gte=inicio, fecha__lte=final)
-
-	if facturas.count() > limite:
-		
-		paginador = Paginator(facturas, limite)
-
-		facturas = paginador.get_page(page)
-
-		c['fecha_inicio'] = inicio
-		c['fecha_final'] = final
-
-	
-	c['facturas'] = facturas
-
-	return render(request, 'ventas/lista_facturas.html', c)
-
-
 
 
 @login_required
@@ -98,25 +59,39 @@ def lista_proformas(request, page=1, inicio=None, final=None):
 
 	c = {'titulo':'Listado de Proformas', 'seccion':'Ventas', 'empresa':empresa, 'page':page}
 
+	usuario = request.user
+
 	validas = models.Proforma.objects.filter(valida=True)
 
-	if validas.count() > 0:
+	if validas != None and validas.count() > 0:
 		
 		for proforma in validas:
 
-			if proforma.fecha < expire:
+			if proforma.fecha <= expire:
 				
 				proforma.valida = False
 
 				proforma.save()
 
 	if inicio == None and final == None:
+
+		if usuario.has_perm('ventas.view_all_proforma'):
+			
+			proformas = models.Proforma.objects.all()
+
+		else:
 		
-		proformas = models.Proforma.objects.filter(anulado=False, fecha__lte=expire.strftime('%Y-%m-%d'))
+			proformas = models.Proforma.objects.filter(vendedor_id=usuario.empleado.id)
 
 	else:
 
-		proformas = models.Proforma.objects.filter(fecha__gte=inicio, fecha__lte=final)
+		if usuario.has_perm('ventas.view_all_proforma'):
+
+			proformas = models.Proforma.objects.filter(fecha__gte=inicio, fecha__lte=final)
+
+		else:
+
+			proformas = models.Proforma.objects.filter(fecha__gte=inicio, fecha__lte=final, vendedor_id=usuario.empleado.id)
 
 		c['inicio'] = inicio
 		c['final'] = final
@@ -140,17 +115,39 @@ def ver_proforma(request, _id):
 
 	proforma = get_object_or_404(models.Proforma, pk=_id)
 
-	empresa = settings.NOMBRE_EMPRESA
+	if (proforma.vendedor == request.user.empleado) or request.user.has_perm('ventas.view_all_proforma'):
+		
+		dias_vigencia = settings.VIGENCIA_PROFORMA
 
-	ruta_edit = reverse('vEditarProforma', kwargs={'_id':_id})
+		today = datetime.date.today()
 
-	ruta_anular = reverse('vAnularProforma', kwargs={'_id':_id})
+		tiempo_vigencia = datetime.timedelta(days=dias_vigencia)
 
-	ruta_reemitir = reverse('vReemitirProforma', kwargs={'_id':_id})
+		expire = today - tiempo_vigencia
 
-	c = {'titulo':'Detalle de Proforma', 'seccion':'Ventas', 'proforma':proforma, 'ruta_edit':ruta_edit, 'ruta_anular':ruta_anular, 'ruta_reemitir':ruta_reemitir}
+		if proforma.fecha <= expire:
+			
+			proforma.vigente = False
 
-	return render(request, 'ventas/ver_proforma.html', c)
+			proforma.save()
+
+		empresa = settings.NOMBRE_EMPRESA
+
+		ruta_edit = reverse('vEditarProforma', kwargs={'_id':_id})
+
+		ruta_anular = reverse('vAnularProforma', kwargs={'_id':_id})
+
+		ruta_reemitir = reverse('vReemitirProforma', kwargs={'_id':_id})
+
+		c = {'titulo':'Detalle de Proforma', 'seccion':'Ventas', 'proforma':proforma, 'ruta_edit':ruta_edit, 'ruta_anular':ruta_anular, 'ruta_reemitir':ruta_reemitir}
+
+		return render(request, 'ventas/ver_proforma.html', c)
+
+	else:
+
+		messages.warning(request, "No tiene autorización para ver esta proforma.")
+
+		return redirect('lista_proformas')
 
 
 
@@ -160,61 +157,69 @@ def detalle_proforma(request, _id):
 
 	proforma = get_object_or_404(models.Proforma, pk=_id)
 
-	extra_row = 4 if proforma.detalleproforma_set.all() != None else 10
+	if proforma.vendedor == request.user.empleado:
 
-	DetalleFormset = inlineformset_factory(models.Proforma, models.DetalleProforma, form=forms.fDetalleProforma, extra=extra_row)
+		extra_row = 4 if proforma.detalleproforma_set.all() != None else 10
 
-	if request.method == "GET":
+		DetalleFormset = inlineformset_factory(models.Proforma, models.DetalleProforma, form=forms.fDetalleProforma, extra=extra_row)
 
-		empresa = settings.NOMBRE_EMPRESA
+		if request.method == "GET":
 
-		formset = DetalleFormset(instance=proforma)
+			empresa = settings.NOMBRE_EMPRESA
 
-		ruta = reverse('vDetalleProforma', kwargs={'_id':_id})
+			formset = DetalleFormset(instance=proforma)
 
-		c = {'titulo':'Detalle de Proforma', 'seccion':'Ventas', 'empresa':empresa, 'proforma':proforma, 'formset':formset, 'ruta':ruta}
+			ruta = reverse('vDetalleProforma', kwargs={'_id':_id})
 
-		messages.info(request, "Los campos con '*' son obligatorios.")
+			c = {'titulo':'Detalle de Proforma', 'seccion':'Ventas', 'empresa':empresa, 'proforma':proforma, 'formset':formset, 'ruta':ruta}
 
-		return render(request, 'core/forms/inline_formset_template.html', c)
+			messages.info(request, "Los campos con '*' son obligatorios.")
 
-	elif request.method == "POST":
+			return render(request, 'core/forms/inline_formset_template.html', c)
 
-		formset = DetalleFormset(request.POST, request.FILES, instance=proforma)
+		elif request.method == "POST":
 
-		if formset.is_valid():
+			formset = DetalleFormset(request.POST, request.FILES, instance=proforma)
 
-			subtotal = 0.00
+			if formset.is_valid():
 
-			for form in formset.forms:
+				subtotal = 0.00
 
-				detalle = form.save(commit=False)
+				for form in formset.forms:
 
-				if detalle.precio_unit <= 0.00:
-					
-					detalle.precio_unit = detalle.producto.precio_unit
+					detalle = form.save(commit=False)
 
-				# Mejorar con conversión de unidad de medida para el cálculo del total
+					if detalle.precio_unit <= 0.00:
+						
+						detalle.precio_unit = detalle.producto.precio_unit
 
-				detalle.total = detalle.cantidad * detalle.precio_unit
+					# Mejorar con conversión de unidad de medida para el cálculo del total
 
-				subtotal += detalle.total
+					detalle.total = detalle.cantidad * detalle.precio_unit
 
-				detalle.save()
+					subtotal += detalle.total
 
-			proforma.subtotal = subtotal
+					detalle.save()
 
-			monto_iva = settings.MONTO_IVA
+				proforma.subtotal = subtotal
 
-			proforma.iva = subtotal * monto_iva
+				monto_iva = settings.MONTO_IVA
 
-			proforma.total = proforma.subtotal + proforma.iva
+				proforma.iva = subtotal * monto_iva
 
-			proforma.save()
+				proforma.total = proforma.subtotal + proforma.iva
 
-			messages.success(request, 'Los datos se registraron con éxito.')
+				proforma.save()
 
-			return redirect('ver_proforma', {'_id':_id})
+				messages.success(request, 'Los datos se registraron con éxito.')
+
+				return redirect('ver_proforma', {'_id':_id})
+
+	else:
+
+		messages.warning(request, "No tiene autorización para crear/editar el detalle de proforma.")
+
+		return redirect('lista_proformas')
 
 		
 
@@ -273,54 +278,66 @@ def editar_proforma(request, _id):
 
 	proforma = get_object_or_404(models.Proforma, pk=_id)
 
-	if proforma.anulado == True or proforma.valida == False:
-		
-		messages.error(request, 'La proforma fue anulada o no es válida. No es posible editar.')
+	if proforma.vendedor == request.user.empleado:
 
-		return redirect('ver_proforma', {'_id':_id})
-
-	dias_vigencia = settings.VIGENCIA_PROFORMA
-
-	today = datetime.date.today()
-
-	tiempo_vigencia = datetime.timedelta(days=dias_vigencia)
-
-	expire = today - tiempo_vigencia
-
-	if proforma.fecha <= expire:
-		
-		messages.error(request, 'La proforma pasó el período de vigencia. No se puede modificar.')
-
-		return redirect('ver_proforma', {'_id':_id})
-
-
-	if request.method == "GET":
-		
-		empresa = settings.NOMBRE_EMPRESA
-
-		form = forms.fProforma(proforma)
-
-		ruta = reverse('vEditarProforma', kwargs={'_id':_id})
-
-		c = {'titulo':'Editar Proforma', 'seccion':'Ventas', 'empresa':empresa, 'form':form, 'ruta':ruta}
-
-		messages.info(request, "Los campos con '*' son obligatorios.")
-
-		return render(request, 'core/forms/form_template.html', c)
-
-	elif request.method == "POST":
-		
-		form = forms.fProforma(request.POST, instance=proforma)
-
-		if form.is_valid():
+		if proforma.anulado == True or proforma.vigente == False:
 			
-			form.save()
+			messages.error(request, 'La proforma fue anulada o no está vigente. No es posible editar.')
 
-			messages.success(request, 'Los datos se actualizaron con éxito.')
+			return redirect('ver_proforma', {'_id':_id})
 
-			messages.info(request, 'A continuación, actualizar el detalle de la proforma.')
+		dias_vigencia = settings.VIGENCIA_PROFORMA
 
-			return redirect('detalle_proforma', {'_id':_id})
+		today = datetime.date.today()
+
+		tiempo_vigencia = datetime.timedelta(days=dias_vigencia)
+
+		expire = today - tiempo_vigencia
+
+		if proforma.fecha <= expire:
+
+			proforma.vigente = False
+
+			proforma.save()
+			
+			messages.error(request, 'La proforma pasó el período de vigencia. No se puede modificar.')
+
+			return redirect('ver_proforma', {'_id':_id})
+
+
+		if request.method == "GET":
+			
+			empresa = settings.NOMBRE_EMPRESA
+
+			form = forms.fProforma(proforma)
+
+			ruta = reverse('vEditarProforma', kwargs={'_id':_id})
+
+			c = {'titulo':'Editar Proforma', 'seccion':'Ventas', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+			messages.info(request, "Los campos con '*' son obligatorios.")
+
+			return render(request, 'core/forms/form_template.html', c)
+
+		elif request.method == "POST":
+			
+			form = forms.fProforma(request.POST, instance=proforma)
+
+			if form.is_valid():
+				
+				form.save()
+
+				messages.success(request, 'Los datos se actualizaron con éxito.')
+
+				messages.info(request, 'A continuación, actualizar el detalle de la proforma.')
+
+				return redirect('detalle_proforma', {'_id':_id})
+
+	else:
+
+		messages.warning(request, "No tiene autorización para editar la proforma.")
+
+		return redirect('lista_proformas')
 
 		
 
@@ -333,17 +350,25 @@ def re_proforma(request, _id):
 
 		proforma = get_object_or_404(models.Proforma, pk=_id)
 
-		hoy = datetime.datetime.today()
+		if proforma.vendedor == request.user.empleado:
 
-		proforma.fecha = hoy
+			hoy = datetime.datetime.today()
 
-		proforma.pk = None
+			proforma.fecha = hoy
 
-		proforma = proforma.save()
+			proforma.pk = None
 
-		messages.success(request, 'La proforma se ha reemitido con éxito.')
+			proforma = proforma.save()
 
-		return redirect('ver_proforma', {'_id':proforma.pk})
+			messages.success(request, 'La proforma se ha reemitido con éxito.')
+
+			return redirect('ver_proforma', {'_id':proforma.pk})
+
+		else:
+
+			messages.warning(request, "No tiene autorización para reemitir esta proforma.")
+
+			return redirect('lista_proformas')
 
 
 
@@ -367,6 +392,47 @@ def anular_proforma(request, _id):
 		messages.success(request, "La proforma se anuló con éxito.")
 
 		return redirect('ver_proforma', {'_id':_id})
+
+
+
+@login_required
+@permission_required('ventas.view_factura')
+def lista_facturas(request, page=1, inicio=None, final=None):
+
+	facturas = None
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	c = {'empresa':empresa, 'seccion':'Ventas', 'titulo':'Lista de Facturas', 'page':page}
+
+	limite = settings.LIMITE_FILAS
+
+	if inicio == None and final == None:
+		
+		periodo = models.Periodo.objects.get(activo=True)
+
+		facturas = models.Factura.objects.filter(fecha__gte=periodo.fecha_inicio, fecha__lte=periodo.fecha_final)
+
+		c['periodo'] = periodo
+
+	else:
+
+		facturas = models.Factura.objects.filter(fecha__gte=inicio, fecha__lte=final)
+
+	if facturas.count() > limite:
+		
+		paginador = Paginator(facturas, limite)
+
+		facturas = paginador.get_page(page)
+
+		c['fecha_inicio'] = inicio
+		c['fecha_final'] = final
+
+	
+	c['facturas'] = facturas
+
+	return render(request, 'ventas/lista_facturas.html', c)
+
 
 
 
@@ -1492,6 +1558,125 @@ def eliminar_ruta(request, _id):
 	messages.success(request, "El registro se eliminó con éxito.")
 
 	return redirect('lista_rutas')
+
+
+
+@login_required
+@permission_required('core.view_camion')
+def lista_camiones(request):
+
+	camiones = models.Camion.objects.all()
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	c = {'titulo':'Lista de Camiones', 'seccion':'Camiones' 'empresa':empresa, 'camiones':camiones}
+
+	return render(request, 'core/lista_camiones.html', c)
+
+
+
+@login_required
+@permission_required('core.view_camion')
+def ver_camion(request, _id):
+
+	camion = get_object_or_404(models.Camion, pk=_id)
+
+	empresa = settings.NOMBRE_EMPRESA
+
+	params = {'_id':_id}
+
+	ruta_edit = reverse('vEditarCamion', kwargs=params)
+
+	ruta_delete = reverse('vEliminarCamion', kwargs=params)
+
+	c = {'titulo':'Datos de Camión', 'seccion':'Camiones', 'empresa':empresa, 'camion':camion, 'ruta_edit':ruta_edit, 'ruta_delete':ruta_delete}
+
+	return render(request, 'ver_camion.html', c)
+
+
+@login_required
+@permission_required('core.add_camion')
+def nuevo_camion(request):
+
+	if request.method == "GET":
+		
+		empresa = settings.NOMBRE_EMPRESA
+
+		form = forms.fCamion()
+
+		ruta = reverse('vNuevoCamion')
+
+		c = {'titulo':'Ingreso de Camion', 'seccion':'Camiones', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/form_template.html', c)
+
+	elif request.method == "POST":
+		
+		form = forms.fCamion(request.POST)
+
+		if form.is_valid():
+			
+			camion = form.save(commit=False)
+
+			camion.save()
+
+			messages.success(request, "Los datos se registraron con éxito.")
+
+			return redirect('ver_camion', {'_id':camion.id})
+
+
+@login_required
+@permission_required('core.change_camion')
+def editar_camion(request, _id):
+
+	camion = get_object_or_404(models.Camion, pk=_id)
+
+	if request.method == "GET":
+		
+		empresa = settings.NOMBRE_EMPRESA
+
+		form = forms.fCamion(camion)
+
+		ruta = reverse('vEditarCamion', kwargs={'_id':_id})
+
+		c = {'titulo':'Editar Datos de Camion', 'seccion':'Camiones', 'empresa':empresa, 'form':form, 'ruta':ruta}
+
+		messages.info(request, "Los campos con '*' son obligatorios.")
+
+		return render(request, 'core/forms/form_template.html', c)
+
+	elif request.method == "POST":
+		
+		form = forms.fCamion(request.POST, instance=camion)
+
+		if form.is_valid():
+			
+			form.save()
+
+			messages.success(request, "Los datos se actualizaron con éxito.")
+
+			return redirect('ver_camion', {'_id':_id})
+
+
+
+@login_required
+@permission_required('core.delete_camion')
+def eliminar_camion(request, _id):
+
+	if request.method == "POST":
+		
+		camion = get_object_or_404(models.Camion, pk=_id)
+
+		camion.delete()
+
+		messages.success(request, "El registro se eliminó con éxito.")
+
+		return redirect('lista_camiones')
+
+
+
 
 
 '''

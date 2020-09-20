@@ -106,19 +106,6 @@ class PasswordChangeForm(forms.Form):
 				raise forms.ValidationError("Las contraseñas no coinciden.")
 
 
-class CategoriaForm(forms.ModelForm):
-	"""Formulario de Categoria"""
-	class Meta:
-		model = models.Categoria
-		exclude = ['id']
-
-class EditCategoriaForm(forms.ModelForm):
-	"""Formulario de Categoria"""
-	class Meta:
-		model = models.Categoria
-		fields = '__all__'
-		widgets = {'id':forms.HiddenInput}
-
 
 class fProducto(forms.ModelForm):
 	"""Formulario de Producto"""
@@ -128,28 +115,5 @@ class fProducto(forms.ModelForm):
 		widgets = {'id':forms.HiddenInput}
 
 
-class UnidadForm(forms.ModelForm):
-	"""Formulario para UnidadMedida"""
-	class Meta:
-		model = models.Unidad
-		exclude = ['id']
-
-
-class EditUnidadForm(forms.ModelForm):
-	"""Formulario para UnidadMedida"""
-	class Meta:
-		model = models.Unidad
-		fields = '__all__'
-		widgets = {
-			'id':forms.HiddenInput
-		}
-		
-		
-class fCamion(forms.ModelForm):
-
-	class Meta:
-		model = models.Camion
-		#fields = '__all__'
-		exclude = ['id']
 		
 		

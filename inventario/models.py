@@ -73,7 +73,7 @@ class Salida(models.Model):
 	observaciones = models.CharField(max_length=1000, null=True)
 
 	class Meta:
-		ordering = ['fecha']
+		ordering = ['almacen', 'fecha']
 	
 
 class DetalleSalida(models.Model):
