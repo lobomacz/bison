@@ -68,15 +68,7 @@ class Producto(models.Model):
 class Conversion(object):
 	"""docstring for Conversion"""
 	
-	origen = models.ForeignKey('TablaDetalle')
-	destino = models.ForeignKey('TablaDetalle')
-	relacion_directa = models.DecimalField(max_digits=8, decimal_places=4)
-	relacion_inversa = models.DecimalField(max_digits=8, decimal_places=4)
-
-	class Meta:
-		ordering = ['origen']
-		verbose_name = 'Conversión de Unidades'
-		verbose_name_plural = 'Conversiones de Unidades'
+	origen = 
 		
 
 
